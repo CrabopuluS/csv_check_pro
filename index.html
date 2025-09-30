@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
     <script src="script.js" type="module" defer></script>
 </head>
 <body>
@@ -39,9 +40,19 @@
                 <h2>Настройки сравнения</h2>
                 <form id="compare-form" class="form">
                     <div class="field-group">
+                        <label for="tableFormat">Формат таблиц</label>
+                        <select id="tableFormat" name="tableFormat">
+                            <option value="csv" selected>CSV (.csv)</option>
+                            <option value="txt">Текстовый (.txt)</option>
+                            <option value="xlsx">Excel (.xlsx)</option>
+                            <option value="xls">Excel 97-2003 (.xls)</option>
+                        </select>
+                        <p class="field-hint">Выберите формат файлов, которые хотите сравнить.</p>
+                    </div>
+                    <div class="field-group">
                         <label for="fileA">Файл 1</label>
                         <input type="file" id="fileA" name="fileA" accept=".csv" required>
-                        <p class="field-hint">Файл в кодировке UTF-8 или UTF-8 with BOM.</p>
+                        <p class="field-hint">Файл в выбранном формате, кодировка UTF-8 для текстовых файлов.</p>
                     </div>
                     <div class="field-group">
                         <label for="fileB">Файл 2</label>
