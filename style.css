@@ -29,6 +29,122 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+.cat-mascot-root {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.cat-mascot {
+    position: absolute;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    max-width: min(320px, 80vw);
+    pointer-events: none;
+    z-index: 3;
+}
+
+.cat-mascot__image {
+    width: 140px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.12));
+}
+
+.cat-mascot__image svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.cat-mascot__bubble {
+    padding: 14px 18px;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.86);
+    color: #f9faff;
+    font-size: 14px;
+    line-height: 1.4;
+    position: relative;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+}
+
+.cat-mascot__bubble::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: -12px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-right-color: rgba(15, 23, 42, 0.86);
+}
+
+.cat-mascot--mirrored {
+    flex-direction: row-reverse;
+}
+
+.cat-mascot--mirrored .cat-mascot__bubble::after {
+    left: auto;
+    right: -12px;
+    border-right-color: transparent;
+    border-left-color: rgba(15, 23, 42, 0.86);
+}
+
+.cat-mascot--top-left {
+    top: 32px;
+    left: 24px;
+}
+
+.cat-mascot--top-right {
+    top: 48px;
+    right: 32px;
+}
+
+.cat-mascot--middle-left {
+    top: 46%;
+    left: 40px;
+}
+
+.cat-mascot--middle-right {
+    top: 52%;
+    right: 40px;
+}
+
+.cat-mascot--bottom-left {
+    bottom: 140px;
+    left: 28px;
+}
+
+.cat-mascot--bottom-right {
+    bottom: 140px;
+    right: 28px;
+}
+
+@media (max-width: 900px) {
+    .cat-mascot {
+        max-width: min(280px, 90vw);
+    }
+
+    .cat-mascot__image {
+        width: 120px;
+    }
+}
+
+@media (max-width: 720px) {
+    .cat-mascot {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        flex-direction: row;
+    }
+
+    .cat-mascot__bubble::after {
+        display: none;
+    }
 }
 
 .hero {
