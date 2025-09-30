@@ -1,7 +1,11 @@
+const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
+const DEFAULT_KEY_HEADER = 'POLICY_NO';
+
 const form = document.getElementById('compare-form');
 const fileInputA = document.getElementById('fileA');
 const fileInputB = document.getElementById('fileB');
 const keyFieldInput = document.getElementById('keyField');
+const keyHeader = document.getElementById('key-header');
 const tableBody = document.querySelector('#results-table tbody');
 const valueHeaderA = document.getElementById('value-header-a');
 const valueHeaderB = document.getElementById('value-header-b');
@@ -14,6 +18,27 @@ const loadingIndicator = document.getElementById('loading-indicator');
 let lastDifferences = [];
 let lastFileNameA = '';
 let lastFileNameB = '';
+let lastKeyFieldName = '';
+
+function validateFormInput(fileA, fileB, keyField) {
+    if (!fileA || !fileB) {
+        throw new Error('Пожалуйста, выберите оба файла для сравнения.');
+    }
+    if (!keyField) {
+        throw new Error('Укажите название ключевого столбца.');
+    }
+    [fileA, fileB].forEach((file) => {
+        if (!isCsvFile(file)) {
+            throw new Error(`Файл ${file.name} не похож на CSV. Загрузите файл с расширением .csv.`);
+        }
+        if (file.size === 0) {
+            throw new Error(`Файл ${file.name} пуст и не может быть обработан.`);
+        }
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            throw new Error(`Файл ${file.name} превышает допустимый размер 15 МБ.`);
+        }
+    });
+}
 
 form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -23,12 +48,10 @@ form.addEventListener('submit', async (event) => {
     const fileB = fileInputB.files[0];
     const keyField = keyFieldInput.value.trim();
 
-    if (!fileA || !fileB) {
-        showError('Пожалуйста, выберите оба файла для сравнения.');
-        return;
-    }
-    if (!keyField) {
-        showError('Укажите название ключевого столбца.');
+    try {
+        validateFormInput(fileA, fileB, keyField);
+    } catch (validationError) {
+        showError(validationError instanceof Error ? validationError.message : String(validationError));
         return;
     }
 
@@ -46,6 +69,7 @@ form.addEventListener('submit', async (event) => {
         lastDifferences = result.differences;
         lastFileNameA = fileA.name;
         lastFileNameB = fileB.name;
+        lastKeyFieldName = result.keyField;
 
         renderDifferences(result.differences, result.headers);
         renderSummary(result.summaryText);
@@ -58,6 +82,7 @@ form.addEventListener('submit', async (event) => {
         lastDifferences = [];
         lastFileNameA = '';
         lastFileNameB = '';
+        lastKeyFieldName = '';
         downloadReportButton.disabled = true;
         downloadDetailedReportButton.disabled = true;
         renderSummary('');
@@ -84,7 +109,7 @@ downloadDetailedReportButton.addEventListener('click', () => {
         return;
     }
     try {
-        const csvContent = buildDetailedReport(lastDifferences, lastFileNameA, lastFileNameB);
+        const csvContent = buildDetailedReport(lastDifferences, lastFileNameA, lastFileNameB, lastKeyFieldName);
         triggerCsvDownload(csvContent, `csv-check-pro-detailed-${Date.now()}.csv`);
     } catch (error) {
         showError(error instanceof Error ? error.message : String(error));
@@ -102,6 +127,7 @@ function readCsvFile(file) {
             header: true,
             skipEmptyLines: true,
             encoding: 'utf-8',
+            dynamicTyping: false,
             error: (error) => reject(new Error(`Не удалось прочитать файл ${file.name}: ${error.message}`)),
             complete: (results) => {
                 if (results.errors && results.errors.length > 0) {
@@ -113,7 +139,20 @@ function readCsvFile(file) {
                     reject(new Error(`Файл ${file.name} не содержит корректных данных.`));
                     return;
                 }
-                resolve({ rows: results.data });
+                const sanitizedRows = results.data.map((row) => {
+                    const entries = Object.entries(row)
+                        .map(([column, value]) => {
+                            const trimmedColumn = column.trim();
+                            if (!trimmedColumn) {
+                                return null;
+                            }
+                            const normalizedValue = typeof value === 'string' ? value : String(value ?? '');
+                            return [trimmedColumn, normalizedValue];
+                        })
+                        .filter(Boolean);
+                    return Object.fromEntries(entries);
+                });
+                resolve({ rows: sanitizedRows });
             }
         });
     });
@@ -131,11 +170,18 @@ function compareDatasets(datasetA, datasetB, keyField, nameA, nameB) {
     const rowsA = datasetA.rows;
     const rowsB = datasetB.rows;
 
-    validateKeyPresence(rowsA, keyField, nameA);
-    validateKeyPresence(rowsB, keyField, nameB);
+    const keyFieldA = resolveKeyField(rowsA, keyField, nameA);
+    const keyFieldB = resolveKeyField(rowsB, keyField, nameB);
 
-    const duplicatesA = detectDuplicateKeys(rowsA, keyField);
-    const duplicatesB = detectDuplicateKeys(rowsB, keyField);
+    if (keyFieldA.toLowerCase() !== keyFieldB.toLowerCase()) {
+        throw new Error(`Столбец "${keyField}" найден как "${keyFieldA}" в файле ${nameA} и как "${keyFieldB}" в файле ${nameB}. Убедитесь, что ключевой столбец совпадает.`);
+    }
+
+    validateKeysFilled(rowsA, keyFieldA, nameA);
+    validateKeysFilled(rowsB, keyFieldB, nameB);
+
+    const duplicatesA = detectDuplicateKeys(rowsA, keyFieldA);
+    const duplicatesB = detectDuplicateKeys(rowsB, keyFieldB);
 
     if (duplicatesA.length || duplicatesB.length) {
         const details = [];
@@ -148,13 +194,14 @@ function compareDatasets(datasetA, datasetB, keyField, nameA, nameB) {
         throw new Error(details.join('\n'));
     }
 
-    const lookupA = buildLookup(rowsA, keyField);
-    const lookupB = buildLookup(rowsB, keyField);
+    const lookupA = buildLookup(rowsA, keyFieldA);
+    const lookupB = buildLookup(rowsB, keyFieldB);
     const allKeys = Array.from(new Set([...Object.keys(lookupA), ...Object.keys(lookupB)])).sort();
 
     const columnsA = collectColumns(rowsA);
     const columnsB = collectColumns(rowsB);
     const allColumns = Array.from(new Set([...columnsA, ...columnsB])).sort();
+    const keyColumns = new Set([keyFieldA, keyFieldB]);
 
     const differences = [];
     for (const key of allKeys) {
@@ -163,19 +210,19 @@ function compareDatasets(datasetA, datasetB, keyField, nameA, nameB) {
 
         if (!rowA) {
             differences.push({
-                POLICY_NO: key,
+                keyValue: key,
                 column: '__missing__',
                 value_a: `Нет записи в ${nameA}`,
-                value_b: buildRowPreview(rowB, allColumns, keyField) || '—',
+                value_b: buildRowPreview(rowB, allColumns, keyColumns) || '—',
                 difference_type: 'missing_in_a'
             });
             continue;
         }
         if (!rowB) {
             differences.push({
-                POLICY_NO: key,
+                keyValue: key,
                 column: '__missing__',
-                value_a: buildRowPreview(rowA, allColumns, keyField) || '—',
+                value_a: buildRowPreview(rowA, allColumns, keyColumns) || '—',
                 value_b: `Нет записи в ${nameB}`,
                 difference_type: 'missing_in_b'
             });
@@ -183,14 +230,14 @@ function compareDatasets(datasetA, datasetB, keyField, nameA, nameB) {
         }
 
         for (const column of allColumns) {
-            if (column === keyField) {
+            if (keyColumns.has(column)) {
                 continue;
             }
             const valueA = (rowA[column] ?? '').trim();
             const valueB = (rowB[column] ?? '').trim();
             if (valueA !== valueB) {
                 differences.push({
-                    POLICY_NO: key,
+                    keyValue: key,
                     column,
                     value_a: valueA,
                     value_b: valueB,
@@ -200,30 +247,51 @@ function compareDatasets(datasetA, datasetB, keyField, nameA, nameB) {
         }
     }
 
-    const summaryText = buildSummary(differences, nameA, nameB);
+    const summaryText = buildSummary(differences, nameA, nameB, keyFieldA);
     return {
         differences,
         headers: {
+            key: keyFieldA,
             valueA: `Значение ${nameA}`,
             valueB: `Значение ${nameB}`
         },
-        summaryText
+        summaryText,
+        keyField: keyFieldA
     };
 }
 
 /**
- * Убедиться, что ключевой столбец присутствует.
+ * Найти реальное имя ключевого столбца с учётом регистра.
  * @param {Array<Record<string, string>>} rows
- * @param {string} keyField
+ * @param {string} requestedKey
  * @param {string} fileName
  */
-function validateKeyPresence(rows, keyField, fileName) {
+function resolveKeyField(rows, requestedKey, fileName) {
     if (!rows.length) {
         throw new Error(`Файл ${fileName} не содержит данных.`);
     }
-    const firstRow = rows[0];
-    if (!(keyField in firstRow)) {
-        throw new Error(`В файле ${fileName} отсутствует столбец "${keyField}".`);
+    const columns = Object.keys(rows[0]);
+    if (columns.includes(requestedKey)) {
+        return requestedKey;
+    }
+    const loweredKey = requestedKey.toLowerCase();
+    const matchedColumn = columns.find((column) => column.toLowerCase() === loweredKey);
+    if (matchedColumn) {
+        return matchedColumn;
+    }
+    throw new Error(`В файле ${fileName} отсутствует столбец "${requestedKey}". Доступные поля: ${columns.join(', ')}.`);
+}
+
+function validateKeysFilled(rows, keyField, fileName) {
+    const emptyRows = [];
+    rows.forEach((row, index) => {
+        const normalizedKey = normalizeKeyValue(row[keyField]);
+        if (!normalizedKey) {
+            emptyRows.push(index + 1);
+        }
+    });
+    if (emptyRows.length) {
+        throw new Error(`В файле ${fileName} обнаружены строки без значения в столбце "${keyField}" (например, строки: ${emptyRows.slice(0, 5).join(', ')}).`);
     }
 }
 
@@ -235,7 +303,12 @@ function validateKeyPresence(rows, keyField, fileName) {
 function collectColumns(rows) {
     const columns = new Set();
     for (const row of rows) {
-        Object.keys(row).forEach((key) => columns.add(key));
+        Object.keys(row).forEach((key) => {
+            const trimmedKey = key.trim();
+            if (trimmedKey) {
+                columns.add(trimmedKey);
+            }
+        });
     }
     return columns;
 }
@@ -246,9 +319,12 @@ function collectColumns(rows) {
  * @param {string} keyField
  */
 function buildLookup(rows, keyField) {
-    const map = {};
+    const map = Object.create(null);
     for (const row of rows) {
-        map[row[keyField]] = row;
+        const key = normalizeKeyValue(row[keyField]);
+        if (key) {
+            map[key] = row;
+        }
     }
     return map;
 }
@@ -263,29 +339,29 @@ function detectDuplicateKeys(rows, keyField) {
     const seen = new Map();
     const duplicates = new Set();
     for (const row of rows) {
-        const key = (row[keyField] ?? '').trim();
+        const key = normalizeKeyValue(row[keyField]);
         const count = (seen.get(key) ?? 0) + 1;
         seen.set(key, count);
         if (count > 1) {
-            duplicates.add(key || '');
+            duplicates.add(key);
         }
     }
-    return Array.from(duplicates).sort();
+    return Array.from(duplicates).filter(Boolean).sort();
 }
 
 /**
  * Сформировать короткое описание строки.
  * @param {Record<string, string>} row
  * @param {string[]} columns
- * @param {string} keyField
+ * @param {Set<string>} keyColumns
  */
-function buildRowPreview(row, columns, keyField) {
+function buildRowPreview(row, columns, keyColumns) {
     if (!row) {
         return '';
     }
     const parts = [];
     for (const column of columns) {
-        if (column === keyField) {
+        if (keyColumns.has(column)) {
             continue;
         }
         const value = (row[column] ?? '').trim();
@@ -302,9 +378,9 @@ function buildRowPreview(row, columns, keyField) {
  * @param {string} nameA
  * @param {string} nameB
  */
-function buildSummary(differences, nameA, nameB) {
+function buildSummary(differences, nameA, nameB, keyField) {
     if (!differences.length) {
-        return `Различий не обнаружено. Файл 1: ${nameA}. Файл 2: ${nameB}.`;
+        return `Различий не обнаружено. Файл 1: ${nameA}. Файл 2: ${nameB}. Ключ: ${keyField}.`;
     }
     const counts = differences.reduce((acc, diff) => {
         acc[diff.difference_type] = (acc[diff.difference_type] ?? 0) + 1;
@@ -321,7 +397,7 @@ function buildSummary(differences, nameA, nameB) {
         details.push(`нет строк в файле 2 — ${counts['missing_in_b']}`);
     }
     const detailsText = details.length ? ` Детализация: ${details.join('; ')}.` : '';
-    return `Всего различий: ${differences.length}. Файл 1: ${nameA}. Файл 2: ${nameB}.${detailsText}`;
+    return `Всего различий: ${differences.length}. Файл 1: ${nameA}. Файл 2: ${nameB}. Ключ: ${keyField}.${detailsText}`;
 }
 
 /**
@@ -367,14 +443,17 @@ function buildAggregatedReport(differences) {
  * @param {Array<Record<string, string>>} differences
  * @param {string} nameA
  * @param {string} nameB
+ * @param {string} keyField
  */
-function buildDetailedReport(differences, nameA, nameB) {
+function buildDetailedReport(differences, nameA, nameB, keyField) {
     if (!differences.length) {
         throw new Error('Отчёт нельзя сохранить: различия отсутствуют.');
     }
 
+    const effectiveKeyField = keyField || DEFAULT_KEY_HEADER;
+
     const headers = [
-        'POLICY_NO',
+        effectiveKeyField,
         'Поле',
         'Тип различия',
         `Значение ${nameA}`,
@@ -388,7 +467,7 @@ function buildDetailedReport(differences, nameA, nameB) {
         const valueA = diff.value_a || '—';
         const valueB = diff.value_b || '—';
         const row = [
-            escapeCsvValue(diff.POLICY_NO),
+            escapeCsvValue(diff.keyValue),
             escapeCsvValue(fieldName),
             escapeCsvValue(typeLabel),
             escapeCsvValue(valueA),
@@ -422,7 +501,9 @@ function triggerCsvDownload(content, filename) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', filename);
+    const safeFilename = filename.replace(/[^\w.\-]+/g, '_');
+    link.setAttribute('download', safeFilename);
+    link.rel = 'noopener';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -436,6 +517,7 @@ function triggerCsvDownload(content, filename) {
  */
 function renderDifferences(differences, headers) {
     tableBody.innerHTML = '';
+    keyHeader.textContent = headers.key || DEFAULT_KEY_HEADER;
     valueHeaderA.textContent = headers.valueA;
     valueHeaderB.textContent = headers.valueB;
 
@@ -450,12 +532,17 @@ function renderDifferences(differences, headers) {
         return;
     }
 
+    const fragment = document.createDocumentFragment();
     for (const diff of differences) {
         const row = document.createElement('tr');
-        row.classList.add(classForDifference(diff.difference_type));
+        row.classList.add('result');
+        const rowClass = classForDifference(diff.difference_type);
+        if (rowClass) {
+            row.classList.add(rowClass);
+        }
 
         const policyCell = document.createElement('td');
-        policyCell.textContent = diff.POLICY_NO;
+        policyCell.textContent = diff.keyValue;
         row.appendChild(policyCell);
 
         const columnCell = document.createElement('td');
@@ -474,8 +561,9 @@ function renderDifferences(differences, headers) {
         valueBCell.textContent = diff.value_b || '—';
         row.appendChild(valueBCell);
 
-        tableBody.appendChild(row);
+        fragment.appendChild(row);
     }
+    tableBody.appendChild(fragment);
 }
 
 /**
@@ -531,6 +619,9 @@ function resetTable() {
     cell.textContent = 'Загрузите файлы и нажмите «Сравнить», чтобы увидеть различия.';
     row.appendChild(cell);
     tableBody.appendChild(row);
+    keyHeader.textContent = lastKeyFieldName || DEFAULT_KEY_HEADER;
+    valueHeaderA.textContent = 'Значение файла 1';
+    valueHeaderB.textContent = 'Значение файла 2';
 }
 
 function showError(message) {
@@ -551,6 +642,18 @@ function showLoadingIndicator() {
 function hideLoadingIndicator() {
     loadingIndicator.hidden = true;
     loadingIndicator.removeAttribute('aria-busy');
+}
+
+function normalizeKeyValue(value) {
+    return typeof value === 'string' ? value.trim() : String(value ?? '').trim();
+}
+
+function isCsvFile(file) {
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.csv')) {
+        return true;
+    }
+    return ['text/csv', 'application/vnd.ms-excel'].includes(file.type);
 }
 
 // Пример использования функций сравнения в изолированном режиме (для тестирования в консоли браузера).
