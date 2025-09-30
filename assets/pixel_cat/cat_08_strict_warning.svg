@@ -1,20 +1,65 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
-  <!-- monitor behind -->
-  <rect x="4" y="5" width="24" height="12" fill="#1f1f1f"/>
-  <rect x="10" y="17" width="12" height="1" fill="#1f1f1f"/>
-  <!-- stern cat -->
-  <rect x="12" y="8" width="8" height="7" fill="#111"/>
-  <rect x="12" y="6" width="3" height="3" fill="#111"/>
-  <rect x="17" y="6" width="3" height="3" fill="#111"/>
-  <rect x="11" y="15" width="10" height="6" fill="#111"/>
-  <rect x="21" y="15" width="2" height="5" fill="#111"/>
-  <!-- eyes stern -->
-  <rect x="13" y="10" width="2" height="1" fill="#b4f0a7"/>
-  <rect x="17" y="10" width="2" height="1" fill="#b4f0a7"/>
-  <rect x="14" y="10" width="1" height="1" fill="#000"/>
-  <rect x="18" y="10" width="1" height="1" fill="#000"/>
-  <rect x="15" y="12" width="2" height="1" fill="#333"/>
-  <!-- exclamation mark above -->
-  <rect x="23" y="4" width="2" height="4" fill="#ffcc00"/>
-  <rect x="23" y="9" width="2" height="2" fill="#ffcc00"/>
+  <rect width="32" height="32" fill="#1a1e2a" />
+  <rect x="0" y="21" width="32" height="11" fill="#1f2433" />
+  <!-- warning poster -->
+  <rect x="23" y="5" width="7" height="12" fill="#f4df8b" />
+  <rect x="24" y="6" width="5" height="10" fill="#fff7c6" />
+  <rect x="25" y="7" width="3" height="6" fill="#f4df8b" />
+  <rect x="25" y="14" width="3" height="1" fill="#f4df8b" />
+  <rect x="26" y="8" width="1" height="4" fill="#cf3e3e">
+    <animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" />
+  </rect>
+  <!-- cat body -->
+  <g fill="#37231c">
+    <rect x="6" y="11" width="16" height="10" />
+    <rect x="7" y="9" width="14" height="4" />
+    <rect x="8" y="7" width="12" height="3" />
+    <rect x="9" y="6" width="10" height="2" />
+    <rect x="5" y="15" width="4" height="6" />
+    <rect x="19" y="15" width="4" height="6" />
+    <rect x="4" y="17" width="5" height="5" />
+    <rect x="18" y="17" width="5" height="5" />
+    <rect x="5" y="10" width="2" height="4" />
+    <rect x="20" y="10" width="2" height="4" />
+    <rect x="20" y="14" width="6" height="2" />
+  </g>
+  <g fill="#f7d5b3">
+    <rect x="7" y="8" width="14" height="3" />
+    <rect x="6" y="10" width="16" height="7" />
+    <rect x="7" y="14" width="14" height="4" />
+    <rect x="8" y="16" width="12" height="3" />
+    <rect x="9" y="17" width="10" height="2" />
+    <rect x="6" y="19" width="4" height="2" />
+    <rect x="18" y="19" width="4" height="2" />
+    <rect x="21" y="15" width="3" height="2" />
+  </g>
+  <g fill="#d6b18b">
+    <rect x="7" y="13" width="3" height="2" />
+    <rect x="19" y="13" width="3" height="2" />
+    <rect x="8" y="15" width="2" height="2" />
+    <rect x="18" y="15" width="2" height="2" />
+    <rect x="9" y="17" width="8" height="1" />
+  </g>
+  <g fill="#fff1dd">
+    <rect x="10" y="15" width="6" height="2" />
+    <rect x="11" y="14" width="4" height="1" />
+  </g>
+  <!-- face -->
+  <rect x="10" y="11" width="2" height="2" fill="#1b1d24" />
+  <rect x="15" y="11" width="2" height="2" fill="#1b1d24" />
+  <rect x="11" y="11" width="1" height="1" fill="#9de6c0" />
+  <rect x="16" y="11" width="1" height="1" fill="#9de6c0" />
+  <rect x="9" y="13" width="9" height="1" fill="#3b1f15" />
+  <rect x="10" y="14" width="7" height="1" fill="#3b1f15" />
+  <rect x="11" y="15" width="5" height="1" fill="#7c3334" />
+  <rect x="11" y="16" width="5" height="1" fill="#5a2628" />
+  <!-- pointing paw -->
+  <g fill="#f7d5b3">
+    <rect x="19" y="16" width="3" height="2" />
+    <rect x="20" y="17" width="4" height="2" />
+    <rect x="22" y="18" width="2" height="2" />
+  </g>
+  <rect x="20" y="15" width="4" height="1" fill="#f7d5b3">
+    <animate attributeName="x" values="20;21;20" dur="1.2s" repeatCount="indefinite" />
+  </rect>
 </svg>
