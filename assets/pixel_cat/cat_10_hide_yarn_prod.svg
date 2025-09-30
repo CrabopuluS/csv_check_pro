@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- cat sitting, sly -->
+  <rect x="12" y="6" width="8" height="7" fill="#111"/>
+  <rect x="12" y="4" width="3" height="3" fill="#111"/>
+  <rect x="17" y="4" width="3" height="3" fill="#111"/>
+  <rect x="11" y="13" width="10" height="6" fill="#111"/>
+  <rect x="21" y="14" width="2" height="5" fill="#111"/>
+  <!-- sly face -->
+  <rect x="13" y="9" width="2" height="1" fill="#b4f0a7"/>
+  <rect x="17" y="9" width="2" height="1" fill="#b4f0a7"/>
+  <rect x="14" y="9" width="1" height="1" fill="#000"/>
+  <rect x="18" y="9" width="1" height="1" fill="#000"/>
+  <rect x="15" y="11" width="3" height="1" fill="#333"/>
+  <!-- yarn ball -->
+  <rect x="6" y="20" width="4" height="4" fill="#cc3b3b"/>
+  <rect x="7" y="21" width="2" height="1" fill="#e56a6a"/>
+  <rect x="7" y="22" width="2" height="1" fill="#e56a6a"/>
+  <!-- box (prod) -->
+  <rect x="20" y="20" width="8" height="5" fill="#b8863b"/>
+  <rect x="20" y="19" width="8" height="2" fill="#d1a15a"/>
+  <!-- arrow into box -->
+  <rect x="14" y="21" width="6" height="1" fill="#cc3b3b"/>
+  <rect x="20" y="21" width="1" height="2" fill="#cc3b3b"/>
+</svg>

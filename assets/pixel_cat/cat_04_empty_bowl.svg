@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- cat with pleading eyes -->
+  <rect x="10" y="5" width="12" height="8" fill="#111"/>
+  <rect x="10" y="3" width="3" height="3" fill="#111"/>
+  <rect x="19" y="3" width="3" height="3" fill="#111"/>
+  <rect x="9" y="13" width="14" height="7" fill="#111"/>
+  <rect x="22" y="14" width="2" height="6" fill="#111"/>
+  <!-- eyes: big sparkle -->
+  <rect x="12" y="9" width="3" height="2" fill="#b4f0a7"/>
+  <rect x="17" y="9" width="3" height="2" fill="#b4f0a7"/>
+  <rect x="13" y="10" width="1" height="1" fill="#000"/>
+  <rect x="18" y="10" width="1" height="1" fill="#000"/>
+  <!-- tiny mouth -->
+  <rect x="15" y="12" width="2" height="1" fill="#333"/>
+  <!-- empty bowl -->
+  <rect x="6" y="22" width="10" height="2" fill="#888"/>
+  <rect x="7" y="21" width="8" height="1" fill="#aaa"/>
+  <!-- emphasis: "empty" shine -->
+  <rect x="9" y="21" width="2" height="1" fill="#e0e0e0"/>
+</svg>
