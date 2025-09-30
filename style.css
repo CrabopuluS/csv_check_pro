@@ -59,7 +59,29 @@ body {
     display: block;
     width: 100%;
     height: auto;
-    image-rendering: pixelated;
+    border-radius: 20px;
+}
+
+.cat-mascot__illustration {
+    animation: cat-mascot-float 8s ease-in-out infinite;
+    transform-origin: center;
+    filter: drop-shadow(0 12px 24px rgba(15, 23, 42, 0.16));
+}
+
+@keyframes cat-mascot-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cat-mascot__illustration {
+        animation: none;
+    }
 }
 
 .cat-mascot__bubble {
