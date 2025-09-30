@@ -1,9 +1,16 @@
 const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
 const DEFAULT_KEY_HEADER = 'POLICY_NO';
+const TABLE_FORMATS = {
+    csv: { label: 'CSV (.csv)', extensions: ['.csv'], accept: '.csv', reader: readDelimitedFile },
+    txt: { label: 'Текстовый (.txt)', extensions: ['.txt'], accept: '.txt', reader: readDelimitedFile },
+    xlsx: { label: 'Excel (.xlsx)', extensions: ['.xlsx'], accept: '.xlsx', reader: readExcelFile },
+    xls: { label: 'Excel 97-2003 (.xls)', extensions: ['.xls'], accept: '.xls', reader: readExcelFile }
+};
 
 const form = document.getElementById('compare-form');
 const fileInputA = document.getElementById('fileA');
 const fileInputB = document.getElementById('fileB');
+const tableFormatSelect = document.getElementById('tableFormat');
 const keyFieldInput = document.getElementById('keyField');
 const keyHeader = document.getElementById('key-header');
 const tableBody = document.querySelector('#results-table tbody');
@@ -20,7 +27,13 @@ let lastFileNameA = '';
 let lastFileNameB = '';
 let lastKeyFieldName = '';
 
-function validateFormInput(fileA, fileB, keyField) {
+initializeFormatHandling();
+
+function validateFormInput(fileA, fileB, keyField, format) {
+    const formatConfig = TABLE_FORMATS[format];
+    if (!formatConfig) {
+        throw new Error('Выбран неподдерживаемый формат файлов.');
+    }
     if (!fileA || !fileB) {
         throw new Error('Пожалуйста, выберите оба файла для сравнения.');
     }
@@ -28,8 +41,8 @@ function validateFormInput(fileA, fileB, keyField) {
         throw new Error('Укажите название ключевого столбца.');
     }
     [fileA, fileB].forEach((file) => {
-        if (!isCsvFile(file)) {
-            throw new Error(`Файл ${file.name} не похож на CSV. Загрузите файл с расширением .csv.`);
+        if (!isFileOfFormat(file, formatConfig)) {
+            throw new Error(`Файл ${file.name} не соответствует выбранному формату (${formatConfig.label}).`);
         }
         if (file.size === 0) {
             throw new Error(`Файл ${file.name} пуст и не может быть обработан.`);
@@ -47,9 +60,10 @@ form.addEventListener('submit', async (event) => {
     const fileA = fileInputA.files[0];
     const fileB = fileInputB.files[0];
     const keyField = keyFieldInput.value.trim();
+    const format = tableFormatSelect.value;
 
     try {
-        validateFormInput(fileA, fileB, keyField);
+        validateFormInput(fileA, fileB, keyField, format);
     } catch (validationError) {
         showError(validationError instanceof Error ? validationError.message : String(validationError));
         return;
@@ -61,8 +75,8 @@ form.addEventListener('submit', async (event) => {
 
     try {
         const [datasetA, datasetB] = await Promise.all([
-            readCsvFile(fileA),
-            readCsvFile(fileB)
+            readTableFile(fileA, format),
+            readTableFile(fileB, format)
         ]);
 
         const result = compareDatasets(datasetA, datasetB, keyField, fileA.name, fileB.name);
@@ -117,45 +131,164 @@ downloadDetailedReportButton.addEventListener('click', () => {
 });
 
 /**
- * Прочитать CSV-файл и вернуть массив объектов.
+ * Прочитать табличный файл в зависимости от выбранного формата.
  * @param {File} file
- * @returns {Promise<{ rows: Array<Record<string, string>> }>} parsed data
+ * @param {string} format
+ * @returns {Promise<{ rows: Array<Record<string, string>> }>}
  */
-function readCsvFile(file) {
+function readTableFile(file, format) {
+    const formatConfig = TABLE_FORMATS[format];
+    if (!formatConfig) {
+        return Promise.reject(new Error('Формат файлов не поддерживается.'));
+    }
+    return formatConfig.reader(file, formatConfig);
+}
+
+/**
+ * Прочитать текстовый файл с разделителями и вернуть массив объектов.
+ * @param {File} file
+ * @returns {Promise<{ rows: Array<Record<string, string>> }>}
+ */
+function readDelimitedFile(file) {
     return new Promise((resolve, reject) => {
         Papa.parse(file, {
             header: true,
-            skipEmptyLines: true,
+            skipEmptyLines: 'greedy',
             encoding: 'utf-8',
             dynamicTyping: false,
             error: (error) => reject(new Error(`Не удалось прочитать файл ${file.name}: ${error.message}`)),
             complete: (results) => {
                 if (results.errors && results.errors.length > 0) {
                     const firstError = results.errors[0];
-                    reject(new Error(`Ошибка разбора CSV ${file.name}: ${firstError.message}`));
+                    reject(new Error(`Ошибка разбора файла ${file.name}: ${firstError.message}`));
                     return;
                 }
                 if (!Array.isArray(results.data)) {
                     reject(new Error(`Файл ${file.name} не содержит корректных данных.`));
                     return;
                 }
-                const sanitizedRows = results.data.map((row) => {
-                    const entries = Object.entries(row)
-                        .map(([column, value]) => {
-                            const trimmedColumn = column.trim();
-                            if (!trimmedColumn) {
-                                return null;
-                            }
-                            const normalizedValue = typeof value === 'string' ? value : String(value ?? '');
-                            return [trimmedColumn, normalizedValue];
-                        })
-                        .filter(Boolean);
-                    return Object.fromEntries(entries);
-                });
+                const sanitizedRows = sanitizeRows(results.data);
                 resolve({ rows: sanitizedRows });
             }
         });
     });
+}
+
+/**
+ * Прочитать файл Excel и вернуть массив объектов.
+ * @param {File} file
+ * @returns {Promise<{ rows: Array<Record<string, string>> }>}
+ */
+function readExcelFile(file) {
+    return new Promise((resolve, reject) => {
+        if (typeof XLSX === 'undefined') {
+            reject(new Error('Библиотека для чтения Excel не загружена. Обновите страницу и попробуйте снова.'));
+            return;
+        }
+        const reader = new FileReader();
+        reader.onerror = () => {
+            reject(new Error(`Не удалось прочитать файл ${file.name}.`));
+        };
+        reader.onload = (event) => {
+            try {
+                const data = new Uint8Array(event.target?.result ?? []);
+                const workbook = XLSX.read(data, { type: 'array' });
+                if (!workbook.SheetNames.length) {
+                    throw new Error('Книга Excel не содержит листов.');
+                }
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
+                const sanitizedRows = sanitizeRows(rows);
+                resolve({ rows: sanitizedRows });
+            } catch (excelError) {
+                const message = excelError instanceof Error ? excelError.message : String(excelError);
+                reject(new Error(`Не удалось обработать Excel файл ${file.name}: ${message}`));
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+/**
+ * Очистить и нормализовать строки данных.
+ * @param {Array<Record<string, unknown>>} rows
+ * @returns {Array<Record<string, string>>}
+ */
+function sanitizeRows(rows) {
+    return rows
+        .map((row) => {
+            const source = row && typeof row === 'object' ? row : {};
+            const entries = Object.entries(source)
+                .map(([column, value]) => {
+                    const trimmedColumn = typeof column === 'string' ? column.trim() : String(column ?? '').trim();
+                    if (!trimmedColumn) {
+                        return null;
+                    }
+                    const normalizedValue = typeof value === 'string' ? value : String(value ?? '');
+                    return [trimmedColumn, normalizedValue];
+                })
+                .filter(Boolean);
+            return Object.fromEntries(entries);
+        })
+        .filter((row) => Object.keys(row).length > 0);
+}
+
+function initializeFormatHandling() {
+    if (!tableFormatSelect) {
+        return;
+    }
+    updateFileInputsAccept(tableFormatSelect.value);
+    tableFormatSelect.addEventListener('change', () => {
+        updateFileInputsAccept(tableFormatSelect.value);
+        clearFilesAfterFormatChange();
+        hideError();
+        lastDifferences = [];
+        lastFileNameA = '';
+        lastFileNameB = '';
+        lastKeyFieldName = '';
+        downloadReportButton.disabled = true;
+        downloadDetailedReportButton.disabled = true;
+        renderSummary('');
+        resetTable();
+    });
+}
+
+function updateFileInputsAccept(format) {
+    const formatConfig = TABLE_FORMATS[format] ?? TABLE_FORMATS.csv;
+    const acceptValue = Array.isArray(formatConfig.accept) ? formatConfig.accept.join(',') : formatConfig.accept;
+    if (acceptValue) {
+        fileInputA.setAttribute('accept', acceptValue);
+        fileInputB.setAttribute('accept', acceptValue);
+    } else {
+        fileInputA.removeAttribute('accept');
+        fileInputB.removeAttribute('accept');
+    }
+}
+
+function clearFilesAfterFormatChange() {
+    fileInputA.value = '';
+    fileInputB.value = '';
+}
+
+function isFileOfFormat(file, formatConfig) {
+    const lowerName = file.name.toLowerCase();
+    if (formatConfig.extensions.some((extension) => lowerName.endsWith(extension))) {
+        return true;
+    }
+    if (formatConfig === TABLE_FORMATS.csv) {
+        return ['text/csv', 'application/vnd.ms-excel'].includes(file.type);
+    }
+    if (formatConfig === TABLE_FORMATS.txt) {
+        return ['text/plain', 'text/csv'].includes(file.type);
+    }
+    if (formatConfig === TABLE_FORMATS.xlsx) {
+        return file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
+    if (formatConfig === TABLE_FORMATS.xls) {
+        return file.type === 'application/vnd.ms-excel';
+    }
+    return false;
 }
 
 /**
@@ -646,14 +779,6 @@ function hideLoadingIndicator() {
 
 function normalizeKeyValue(value) {
     return typeof value === 'string' ? value.trim() : String(value ?? '').trim();
-}
-
-function isCsvFile(file) {
-    const name = file.name.toLowerCase();
-    if (name.endsWith('.csv')) {
-        return true;
-    }
-    return ['text/csv', 'application/vnd.ms-excel'].includes(file.type);
 }
 
 // Пример использования функций сравнения в изолированном режиме (для тестирования в консоли браузера).
