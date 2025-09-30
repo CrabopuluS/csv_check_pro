@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import csv
 import os
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Sequence, Set
 
@@ -24,6 +24,12 @@ class Difference:
     column: str
     value_a: str
     value_b: str
+    difference_type: str
+
+
+VALUE_MISMATCH = "value_mismatch"
+MISSING_IN_A = "missing_in_a"
+MISSING_IN_B = "missing_in_b"
 
 
 class CsvComparisonError(Exception):
@@ -68,6 +74,60 @@ def detect_duplicate_keys(rows: Iterable[Dict[str, str]], key_field: str) -> Lis
     return duplicates
 
 
+FIELD_REPORT_HEADERS = (
+    "Поле",
+    "Всего расхождений",
+    "Несовпадений значений",
+    "Отсутствует в файле 1",
+    "Отсутствует в файле 2",
+)
+
+
+def summarize_differences_by_field(
+    differences: Sequence[Difference],
+) -> List[Dict[str, str]]:
+    """Group differences by column and return rows for report generation."""
+
+    summary: Dict[str, Counter] = defaultdict(Counter)
+    for diff in differences:
+        field_name = diff.column if diff.column != "__missing__" else "Строка отсутствует"
+        summary[field_name][diff.difference_type] += 1
+
+    report_rows: List[Dict[str, str]] = []
+    for field_name in sorted(summary.keys()):
+        counts = summary[field_name]
+        total = sum(counts.values())
+        report_rows.append(
+            {
+                FIELD_REPORT_HEADERS[0]: field_name,
+                FIELD_REPORT_HEADERS[1]: str(total),
+                FIELD_REPORT_HEADERS[2]: str(counts.get(VALUE_MISMATCH, 0)),
+                FIELD_REPORT_HEADERS[3]: str(counts.get(MISSING_IN_A, 0)),
+                FIELD_REPORT_HEADERS[4]: str(counts.get(MISSING_IN_B, 0)),
+            }
+        )
+    return report_rows
+
+
+def write_field_report(
+    differences: Sequence[Difference],
+    output_path: str,
+) -> None:
+    """Persist aggregated difference information to CSV."""
+
+    if not output_path:
+        raise CsvComparisonError("Не указан путь для сохранения отчёта.")
+
+    report_rows = summarize_differences_by_field(differences)
+    if not report_rows:
+        raise CsvComparisonError("Отчёт нельзя сохранить: различия отсутствуют.")
+
+    with open(output_path, "w", encoding="utf-8", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=FIELD_REPORT_HEADERS)
+        writer.writeheader()
+        writer.writerows(report_rows)
+
+
 def compare_csv_files(
     file_path_a: str,
     file_path_b: str,
@@ -105,6 +165,18 @@ def compare_csv_files(
     columns_b = collect_columns(rows_b)
     all_columns = list(sorted(columns_a | columns_b))
 
+    def row_preview(row: Dict[str, str]) -> str:
+        """Build a short description of row values excluding the key."""
+
+        parts: List[str] = []
+        for column in all_columns:
+            if column == key_field:
+                continue
+            value = row.get(column, "")
+            if value:
+                parts.append(f"{column}={value}")
+        return ", ".join(parts) if parts else "данные отсутствуют"
+
     differences: List[Difference] = []
     for key in all_keys:
         row_a = lookup_a.get(key)
@@ -114,8 +186,11 @@ def compare_csv_files(
                 Difference(
                     policy_no=key,
                     column="__missing__",
-                    value_a="—",
-                    value_b=f"Строка отсутствует в {os.path.basename(file_path_a)}",
+                    value_a=f"Нет записи в {os.path.basename(file_path_a)}",
+                    value_b=(
+                        f"Данные файла 2: {row_preview(row_b)}" if row_b else "—"
+                    ),
+                    difference_type=MISSING_IN_A,
                 )
             )
             continue
@@ -124,8 +199,9 @@ def compare_csv_files(
                 Difference(
                     policy_no=key,
                     column="__missing__",
-                    value_a=f"Строка отсутствует в {os.path.basename(file_path_b)}",
-                    value_b="—",
+                    value_a=f"Данные файла 1: {row_preview(row_a)}",
+                    value_b=f"Нет записи в {os.path.basename(file_path_b)}",
+                    difference_type=MISSING_IN_B,
                 )
             )
             continue
@@ -142,6 +218,7 @@ def compare_csv_files(
                         column=column,
                         value_a=value_a,
                         value_b=value_b,
+                        difference_type=VALUE_MISMATCH,
                     )
                 )
 
@@ -160,6 +237,9 @@ class CsvComparatorApp(tk.Tk):
         self.file_path_a = tk.StringVar()
         self.file_path_b = tk.StringVar()
         self.key_field = tk.StringVar(value="Policy_no")
+        self.differences: List[Difference] = []
+        self.last_file_name_a = ""
+        self.last_file_name_b = ""
 
         self._build_ui()
 
@@ -182,13 +262,21 @@ class CsvComparatorApp(tk.Tk):
             side=tk.LEFT, padx=(5, 0)
         )
 
+        self.report_button = ttk.Button(
+            key_frame,
+            text="Сохранить отчёт",
+            command=self.export_report,
+            state=tk.DISABLED,
+        )
+        self.report_button.pack(side=tk.RIGHT)
+
         ttk.Button(
             key_frame,
             text="Сравнить",
             command=self.compare_and_display,
-        ).pack(side=tk.RIGHT)
+        ).pack(side=tk.RIGHT, padx=(10, 10))
 
-        columns = ("policy_no", "column", "value_a", "value_b")
+        columns = ("policy_no", "column", "difference", "value_a", "value_b")
         self.tree = ttk.Treeview(
             main_frame,
             columns=columns,
@@ -197,12 +285,29 @@ class CsvComparatorApp(tk.Tk):
         self.headings = {
             "policy_no": "Policy_no",
             "column": "Поле",
+            "difference": "Тип различия",
             "value_a": "Значение файла 1",
             "value_b": "Значение файла 2",
         }
         for column in columns:
             self.tree.heading(column, text=self.headings[column])
             self.tree.column(column, anchor=tk.W, stretch=True)
+
+        self.tree.tag_configure(
+            VALUE_MISMATCH,
+            background="#fdecea",
+            foreground="#c0392b",
+        )
+        self.tree.tag_configure(
+            MISSING_IN_A,
+            background="#e8f6f3",
+            foreground="#0b5345",
+        )
+        self.tree.tag_configure(
+            MISSING_IN_B,
+            background="#ebf5fb",
+            foreground="#1a5276",
+        )
 
         scrollbar = ttk.Scrollbar(
             main_frame, orient=tk.VERTICAL, command=self.tree.yview
@@ -261,13 +366,20 @@ class CsvComparatorApp(tk.Tk):
         try:
             differences = compare_csv_files(file_a, file_b, key_field)
         except CsvComparisonError as error:
+            self.differences = []
+            self.report_button.config(state=tk.DISABLED)
             messagebox.showerror("Ошибка", str(error))
             return
         except Exception as error:  # pragma: no cover - защитный блок
+            self.differences = []
+            self.report_button.config(state=tk.DISABLED)
             messagebox.showerror("Ошибка", f"Непредвиденная ошибка: {error}")
             return
 
-        self._populate_tree(differences, os.path.basename(file_a), os.path.basename(file_b))
+        self.differences = list(differences)
+        self.last_file_name_a = os.path.basename(file_a)
+        self.last_file_name_b = os.path.basename(file_b)
+        self._populate_tree(self.differences, self.last_file_name_a, self.last_file_name_b)
 
     def _populate_tree(
         self,
@@ -280,30 +392,111 @@ class CsvComparatorApp(tk.Tk):
             self.tree.delete(item)
 
         if not differences:
-            self.status_label.config(text="Различий не обнаружено.")
+            self.report_button.config(state=tk.DISABLED)
+            self.status_label.config(
+                text=(
+                    "Различий не обнаружено. "
+                    f"Файл 1: {file_name_a}. Файл 2: {file_name_b}."
+                )
+            )
             self.tree.heading("value_a", text=self.headings["value_a"])
             self.tree.heading("value_b", text=self.headings["value_b"])
             return
 
         self.tree.heading("value_a", text=f"Значение {file_name_a}")
         self.tree.heading("value_b", text=f"Значение {file_name_b}")
+        self.report_button.config(state=tk.NORMAL)
 
         for diff in differences:
             column_label = (
                 "Строка отсутствует" if diff.column == "__missing__" else diff.column
             )
+            difference_label = self._format_difference_label(diff)
             self.tree.insert(
                 "",
                 tk.END,
-                values=(diff.policy_no, column_label, diff.value_a, diff.value_b),
+                values=(
+                    diff.policy_no,
+                    column_label,
+                    difference_label,
+                    diff.value_a,
+                    diff.value_b,
+                ),
+                tags=(diff.difference_type,),
             )
 
-        self.status_label.config(
-            text=(
-                f"Обнаружено различий: {len(differences)}. "
-                f"Источник 1: {file_name_a}. Источник 2: {file_name_b}."
+        self._update_status(differences, file_name_a, file_name_b)
+
+    def _format_difference_label(self, diff: Difference) -> str:
+        """Return a human readable label for a difference."""
+
+        if diff.difference_type == VALUE_MISMATCH:
+            return "Несовпадение значений"
+        if diff.difference_type == MISSING_IN_A:
+            return "Нет строки в файле 1"
+        if diff.difference_type == MISSING_IN_B:
+            return "Нет строки в файле 2"
+        return "Различие"
+
+    def _update_status(
+        self,
+        differences: Sequence[Difference],
+        file_name_a: str,
+        file_name_b: str,
+    ) -> None:
+        """Update summary label with aggregated difference counts."""
+
+        type_counts = Counter(diff.difference_type for diff in differences)
+        details: List[str] = []
+        if type_counts.get(VALUE_MISMATCH):
+            details.append(
+                f"несовпадений значений — {type_counts[VALUE_MISMATCH]}"
             )
+        if type_counts.get(MISSING_IN_A):
+            details.append(f"нет строк в файле 1 — {type_counts[MISSING_IN_A]}")
+        if type_counts.get(MISSING_IN_B):
+            details.append(f"нет строк в файле 2 — {type_counts[MISSING_IN_B]}")
+
+        details_text = "; ".join(details)
+        base_text = (
+            f"Всего различий: {len(differences)}. "
+            f"Файл 1: {file_name_a}. Файл 2: {file_name_b}."
         )
+        if details_text:
+            base_text = f"{base_text} Детализация: {details_text}."
+        self.status_label.config(text=base_text)
+
+    def export_report(self) -> None:
+        """Save aggregated report to CSV."""
+
+        if not self.differences:
+            messagebox.showinfo(
+                "Отчёт",
+                "Сначала выполните сравнение, чтобы сохранить отчёт.",
+            )
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            title="Сохранить отчёт",
+            defaultextension=".csv",
+            filetypes=(("CSV файлы", "*.csv"), ("Все файлы", "*.*")),
+        )
+        if not file_path:
+            return
+
+        try:
+            write_field_report(self.differences, file_path)
+        except CsvComparisonError as error:
+            messagebox.showerror("Ошибка", str(error))
+            return
+        except OSError as error:
+            messagebox.showerror(
+                "Ошибка",
+                f"Не удалось сохранить отчёт: {error}",
+            )
+            return
+
+        messagebox.showinfo("Готово", f"Отчёт сохранён: {file_path}")
 
 
 def run_app() -> None:
