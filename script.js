@@ -7,110 +7,78 @@ const TABLE_FORMATS = {
     xls: { label: 'Excel 97-2003 (.xls)', extensions: ['.xls'], accept: '.xls', reader: readExcelFile }
 };
 
+const LAST_SCENE_STORAGE_KEY = 'csv-check-pro:last-cat-scene';
+
 const CAT_SCENES = [
     {
-        id: 'keyboard-nap',
-        ariaLabel: 'Черный кот растянулся на клавиатуре и зевает.',
-        svg: `
-            <svg viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="furGradient" x1="0%" x2="100%" y1="0%" y2="100%">
-                        <stop offset="0%" stop-color="#1b1b1f" />
-                        <stop offset="100%" stop-color="#09090c" />
-                    </linearGradient>
-                </defs>
-                <rect x="20" y="78" width="140" height="18" rx="8" fill="#2f3545" />
-                <rect x="12" y="92" width="156" height="16" rx="6" fill="#252a38" />
-                <ellipse cx="70" cy="62" rx="52" ry="28" fill="url(#furGradient)" />
-                <ellipse cx="126" cy="58" rx="34" ry="22" fill="url(#furGradient)" />
-                <circle cx="136" cy="36" r="18" fill="url(#furGradient)" />
-                <path d="M146 35 Q150 32 154 36" stroke="#f4f4f6" stroke-width="2" stroke-linecap="round" />
-                <circle cx="132" cy="33" r="3" fill="#f4f4f6" />
-                <circle cx="142" cy="35" r="3" fill="#f4f4f6" />
-                <path d="M138 43 Q140 46 144 44" stroke="#f4f4f6" stroke-width="1.6" stroke-linecap="round" />
-                <path d="M40 66 Q34 74 26 70" stroke="#f4f4f6" stroke-width="2" stroke-linecap="round" />
-            </svg>
-        `,
+        id: 'keyboard-yawn',
+        ariaLabel: 'Пиксельный кот зевает и растянулся на клавиатуре.',
+        image: 'assets/pixel_cat/cat_01_keyboard_yawn.svg',
         message: 'Лиза выгрузила новый датасет, Руслан чинит код, а я проверяю, чтобы клавиатура оставалась тёплой.',
         positionClass: 'cat-mascot--top-right cat-mascot--mirrored'
     },
     {
-        id: 'coffee-cup',
-        ariaLabel: 'Черный кот обнял кружку с кофе и прищурился.',
-        svg: `
-            <svg viewBox="0 0 180 140" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="96" cy="96" rx="62" ry="32" fill="#101117" />
-                <ellipse cx="96" cy="74" rx="54" ry="28" fill="#18181f" />
-                <ellipse cx="62" cy="60" rx="28" ry="26" fill="#18181f" />
-                <ellipse cx="126" cy="60" rx="28" ry="26" fill="#18181f" />
-                <circle cx="72" cy="54" r="6" fill="#f4f4f6" />
-                <circle cx="120" cy="54" r="6" fill="#f4f4f6" />
-                <path d="M80 60 Q90 70 100 60" stroke="#f4f4f6" stroke-width="3" stroke-linecap="round" />
-                <rect x="110" y="78" width="44" height="32" rx="12" fill="#3c2f23" />
-                <ellipse cx="132" cy="76" rx="28" ry="12" fill="#4e3d2c" />
-                <ellipse cx="132" cy="76" rx="18" ry="6" fill="#8c5a3c" />
-                <path d="M150 82 Q164 86 162 102" stroke="#3c2f23" stroke-width="8" stroke-linecap="round" />
-            </svg>
-        `,
-        message: 'Руслан бодрит себя кофе, Лиза — свежим отчётом. А мне бы бодрящий корм, но никто не заметил пустую миску.',
+        id: 'keyboard-guard',
+        ariaLabel: 'Пиксельный кот охраняет тёплую клавиатуру.',
+        image: 'assets/pixel_cat/cat_02_keyboard_warm.svg',
+        message: 'Клавиши нагрел, отчёт проверил, жду награду за бдительность.',
         positionClass: 'cat-mascot--middle-left'
     },
     {
-        id: 'blanket-roll',
-        ariaLabel: 'Черный кот свернулся в клубок на пледе.',
-        svg: `
-            <svg viewBox="0 0 180 140" xmlns="http://www.w3.org/2000/svg">
-                <rect x="26" y="40" width="128" height="80" rx="28" fill="#1d1f2b" />
-                <ellipse cx="90" cy="88" rx="58" ry="34" fill="#111118" />
-                <ellipse cx="120" cy="64" rx="30" ry="26" fill="#111118" />
-                <ellipse cx="62" cy="64" rx="30" ry="26" fill="#111118" />
-                <circle cx="70" cy="58" r="5" fill="#f5f5f7" />
-                <circle cx="110" cy="58" r="5" fill="#f5f5f7" />
-                <path d="M74 66 Q86 74 102 66" stroke="#f5f5f7" stroke-width="2.6" stroke-linecap="round" />
-                <path d="M46 108 Q60 118 72 110" stroke="#f5f5f7" stroke-width="2" stroke-linecap="round" />
-            </svg>
-        `,
+        id: 'coffee-hug',
+        ariaLabel: 'Пиксельный кот обнимает кружку с кофе.',
+        image: 'assets/pixel_cat/cat_03_hug_mug.svg',
+        message: 'Руслан бодрит себя кофе, Лиза — свежим отчётом, а я согреваюсь об кружку и жду апдейтов.',
+        positionClass: 'cat-mascot--middle-right'
+    },
+    {
+        id: 'empty-bowl',
+        ariaLabel: 'Пиксельный кот внимательно смотрит на пустую миску.',
+        image: 'assets/pixel_cat/cat_04_empty_bowl.svg',
+        message: 'Проверка данных идёт полным ходом, а миска по-прежнему пуста. Кажется, пора напоминать команде о важном.',
+        positionClass: 'cat-mascot--bottom-left'
+    },
+    {
+        id: 'blanket-cozy',
+        ariaLabel: 'Пиксельный кот укутался в плед.',
+        image: 'assets/pixel_cat/cat_05_cozy_blanket.svg',
         message: 'Лиза строит дашборды, Руслан деплоит, а я тестирую новый плед на совместимость с ленивой жизнью.',
         positionClass: 'cat-mascot--bottom-right cat-mascot--mirrored'
     },
     {
-        id: 'monitor-guard',
-        ariaLabel: 'Черный кот сидит перед монитором и смотрит строго.',
-        svg: `
-            <svg viewBox="0 0 180 150" xmlns="http://www.w3.org/2000/svg">
-                <rect x="52" y="20" width="84" height="58" rx="10" fill="#222838" />
-                <rect x="74" y="78" width="40" height="10" rx="4" fill="#181c29" />
-                <rect x="64" y="88" width="60" height="10" rx="6" fill="#101117" />
-                <ellipse cx="92" cy="108" rx="54" ry="32" fill="#0f1118" />
-                <ellipse cx="66" cy="84" rx="24" ry="22" fill="#0f1118" />
-                <ellipse cx="118" cy="84" rx="24" ry="22" fill="#0f1118" />
-                <circle cx="78" cy="80" r="6" fill="#f4f4f6" />
-                <circle cx="108" cy="80" r="6" fill="#f4f4f6" />
-                <path d="M84 92 Q92 96 100 92" stroke="#f4f4f6" stroke-width="2.4" stroke-linecap="round" />
-                <path d="M56 120 Q60 132 52 138" stroke="#f4f4f6" stroke-width="2" stroke-linecap="round" />
-            </svg>
-        `,
-        message: 'Следующий, кто потревожит мой монитор, будет слушать лекцию о чистом коде от Руслана и о чистом датасете от Лизы.',
+        id: 'blanket-check',
+        ariaLabel: 'Пиксельный кот проверяет мягкость пледа.',
+        image: 'assets/pixel_cat/cat_06_blanket_check.svg',
+        message: 'Ревьюю покрытие: плед соответствует требованиям по уюту и безопасности релиза.',
         positionClass: 'cat-mascot--top-left'
     },
     {
-        id: 'yarn-plan',
-        ariaLabel: 'Черный кот играет с клубком пряжи и хитро улыбается.',
-        svg: `
-            <svg viewBox="0 0 180 150" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="92" cy="94" rx="58" ry="34" fill="#12141d" />
-                <ellipse cx="60" cy="74" rx="28" ry="26" fill="#12141d" />
-                <ellipse cx="122" cy="74" rx="28" ry="26" fill="#12141d" />
-                <circle cx="70" cy="68" r="6" fill="#f4f4f6" />
-                <circle cx="112" cy="68" r="6" fill="#f4f4f6" />
-                <path d="M78 76 Q92 84 108 76" stroke="#f4f4f6" stroke-width="2.4" stroke-linecap="round" />
-                <circle cx="126" cy="110" r="18" fill="#f59e0b" />
-                <path d="M112 104 Q130 118 144 96" stroke="#f59e0b" stroke-width="4" fill="none" stroke-linecap="round" />
-                <path d="M144 96 Q152 106 138 118" stroke="#f59e0b" stroke-width="4" fill="none" stroke-linecap="round" />
-            </svg>
-        `,
+        id: 'monitor-guard',
+        ariaLabel: 'Пиксельный кот строго смотрит на монитор.',
+        image: 'assets/pixel_cat/cat_07_stern_monitor.svg',
+        message: 'Следующий, кто потревожит мой монитор, будет слушать лекцию о чистом коде от Руслана и о чистом датасете от Лизы.',
+        positionClass: 'cat-mascot--top-right'
+    },
+    {
+        id: 'warning-poster',
+        ariaLabel: 'Пиксельный кот охраняет плакат-предупреждение.',
+        image: 'assets/pixel_cat/cat_08_strict_warning.svg',
+        message: 'На стене список правил. Первое — не ломать прод. Второе — гладить кота. Третье — смотри пункт один.',
+        positionClass: 'cat-mascot--middle-left cat-mascot--mirrored'
+    },
+    {
+        id: 'yarn-play',
+        ariaLabel: 'Пиксельный кот играет с клубком пряжи.',
+        image: 'assets/pixel_cat/cat_09_play_yarn.svg',
         message: 'Лиза ловит аномалии в данных, Руслан — баги в коде, а я ловлю клубок и прячу его в продакшене.',
         positionClass: 'cat-mascot--middle-right cat-mascot--mirrored'
+    },
+    {
+        id: 'yarn-hide',
+        ariaLabel: 'Пиксельный кот прячет клубок в коробке.',
+        image: 'assets/pixel_cat/cat_10_hide_yarn_prod.svg',
+        message: 'Клубок успешно замаскирован под релизную коробку. Спрятано на ветке production, не говорите менеджеру.',
+        positionClass: 'cat-mascot--bottom-right'
     }
 ];
 
@@ -324,17 +292,39 @@ function initializeCatMascot() {
         return;
     }
 
-    const sceneIndex = Math.floor(Math.random() * CAT_SCENES.length);
-    const scene = CAT_SCENES[sceneIndex];
+    let availableScenes = CAT_SCENES;
+    try {
+        const previousSceneId = sessionStorage.getItem(LAST_SCENE_STORAGE_KEY);
+        if (previousSceneId && CAT_SCENES.length > 1) {
+            const filtered = CAT_SCENES.filter((scene) => scene.id !== previousSceneId);
+            if (filtered.length) {
+                availableScenes = filtered;
+            }
+        }
+    } catch (storageError) {
+        console.warn('Не удалось получить данные из sessionStorage:', storageError);
+    }
+
+    const sceneIndex = Math.floor(Math.random() * availableScenes.length);
+    const scene = availableScenes[sceneIndex];
+
+    try {
+        sessionStorage.setItem(LAST_SCENE_STORAGE_KEY, scene.id);
+    } catch (storageError) {
+        console.warn('Не удалось сохранить данные в sessionStorage:', storageError);
+    }
 
     const wrapper = document.createElement('div');
     wrapper.className = `cat-mascot ${scene.positionClass}`.trim();
 
     const imageContainer = document.createElement('div');
     imageContainer.className = 'cat-mascot__image';
-    imageContainer.setAttribute('role', 'img');
-    imageContainer.setAttribute('aria-label', scene.ariaLabel);
-    imageContainer.innerHTML = scene.svg;
+    const imageElement = document.createElement('img');
+    imageElement.src = scene.image;
+    imageElement.alt = scene.ariaLabel;
+    imageElement.loading = 'lazy';
+    imageElement.decoding = 'async';
+    imageContainer.append(imageElement);
 
     const bubble = document.createElement('div');
     bubble.className = 'cat-mascot__bubble';
