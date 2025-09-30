@@ -8,6 +8,7 @@ const valueHeaderB = document.getElementById('value-header-b');
 const summaryBlock = document.getElementById('summary');
 const errorBlock = document.getElementById('form-error');
 const downloadReportButton = document.getElementById('download-report');
+const loadingIndicator = document.getElementById('loading-indicator');
 
 let lastDifferences = [];
 let lastFileNameA = '';
@@ -30,6 +31,9 @@ form.addEventListener('submit', async (event) => {
         return;
     }
 
+    downloadReportButton.disabled = true;
+    showLoadingIndicator();
+
     try {
         const [datasetA, datasetB] = await Promise.all([
             readCsvFile(fileA),
@@ -51,6 +55,8 @@ form.addEventListener('submit', async (event) => {
         downloadReportButton.disabled = true;
         renderSummary('');
         showError(error instanceof Error ? error.message : String(error));
+    } finally {
+        hideLoadingIndicator();
     }
 });
 
@@ -478,6 +484,16 @@ function showError(message) {
 function hideError() {
     errorBlock.hidden = true;
     errorBlock.textContent = '';
+}
+
+function showLoadingIndicator() {
+    loadingIndicator.hidden = false;
+    loadingIndicator.setAttribute('aria-busy', 'true');
+}
+
+function hideLoadingIndicator() {
+    loadingIndicator.hidden = true;
+    loadingIndicator.removeAttribute('aria-busy');
 }
 
 // Пример использования функций сравнения в изолированном режиме (для тестирования в консоли браузера).
