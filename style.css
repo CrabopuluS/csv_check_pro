@@ -54,10 +54,12 @@ body {
     filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.12));
 }
 
+.cat-mascot__image img,
 .cat-mascot__image svg {
     display: block;
     width: 100%;
     height: auto;
+    image-rendering: pixelated;
 }
 
 .cat-mascot__bubble {
