@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Check Pro — Веб-версия</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+    <script src="script.js" type="module" defer></script>
+</head>
+<body>
+    <div class="page">
+        <header class="hero">
+            <div class="hero__content">
+                <h1>CSV Check Pro</h1>
+                <p>Загружайте два CSV-файла, выбирайте ключевой столбец и мгновенно получайте отчёт о расхождениях прямо в браузере.</p>
+            </div>
+        </header>
+        <main class="container">
+            <section class="card card--inputs">
+                <h2>Настройки сравнения</h2>
+                <form id="compare-form" class="form">
+                    <div class="field-group">
+                        <label for="fileA">Файл 1</label>
+                        <input type="file" id="fileA" name="fileA" accept=".csv" required>
+                        <p class="field-hint">Файл в кодировке UTF-8 или UTF-8 with BOM.</p>
+                    </div>
+                    <div class="field-group">
+                        <label for="fileB">Файл 2</label>
+                        <input type="file" id="fileB" name="fileB" accept=".csv" required>
+                    </div>
+                    <div class="field-group field-group--inline">
+                        <label for="keyField">Ключевой столбец</label>
+                        <input type="text" id="keyField" name="keyField" value="POLICY_NO" placeholder="Например, POLICY_NO" required>
+                    </div>
+                    <div class="form__actions">
+                        <button type="submit" class="button button--primary">Сравнить</button>
+                        <button type="button" id="download-report" class="button button--ghost" disabled>Скачать отчёт</button>
+                    </div>
+                </form>
+                <div id="form-error" class="alert alert--error" role="alert" hidden></div>
+                <div id="summary" class="summary" hidden></div>
+            </section>
+
+            <section class="card card--table">
+                <header class="card__header">
+                    <h2>Результаты сравнения</h2>
+                    <div class="legend">
+                        <span class="legend__item legend__item--mismatch">Несовпадение значений</span>
+                        <span class="legend__item legend__item--missing-a">Нет строки в файле 1</span>
+                        <span class="legend__item legend__item--missing-b">Нет строки в файле 2</span>
+                    </div>
+                </header>
+                <div class="table-wrapper">
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th>POLICY_NO</th>
+                                <th>Поле</th>
+                                <th>Тип различия</th>
+                                <th id="value-header-a">Значение файла 1</th>
+                                <th id="value-header-b">Значение файла 2</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="empty-state">
+                                <td colspan="5">Загрузите файлы и нажмите «Сравнить», чтобы увидеть различия.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+        <footer class="footer">
+            <p>CSV Check Pro © 2024. Работает прямо в браузере, данные не покидают ваш компьютер.</p>
+        </footer>
+    </div>
+</body>
+</html>
