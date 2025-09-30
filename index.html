@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV Check Pro — Веб-версия</title>
+    <title>File cheker — Веб-версия</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,10 +15,10 @@
     <div class="page">
         <header class="hero">
             <div class="hero__content">
-                <div class="hero__badge" aria-hidden="true">Новый облик CSV Check Pro</div>
-                <h1>CSV Check Pro</h1>
-                <p class="hero__tagline">Премиальный сервис для точного сравнения CSV, созданный для команд, которые ценят скорость, контроль и стиль.</p>
-                <ul class="hero__features" aria-label="Преимущества CSV Check Pro">
+                <div class="hero__badge" aria-hidden="true">Новый облик File cheker</div>
+                <h1>File cheker</h1>
+                <p class="hero__tagline">Премиальный сервис для точного сравнения CSV, созданный для команд, которые ценят скорость, контроль и стиль. <span class="hero__tagline-signature">by Liza</span></p>
+                <ul class="hero__features" aria-label="Преимущества File cheker">
                     <li class="hero__feature">
                         <span class="hero__feature-icon" aria-hidden="true">⚡</span>
                         <span>Мгновенная проверка тысяч строк прямо в браузере</span>
@@ -58,7 +58,7 @@
                     </div>
                 </form>
                 <div id="form-error" class="alert alert--error" role="alert" hidden></div>
-                <div id="summary" class="summary" hidden></div>
+                <div id="summary" class="summary" role="status" hidden></div>
                 <div id="loading-indicator" class="loading-indicator" role="status" aria-live="polite" hidden>
                     <span class="loading-indicator__spinner" aria-hidden="true"></span>
                     <span>Файлы обрабатываются, пожалуйста, подождите…</span>
@@ -78,7 +78,7 @@
                     <table id="results-table">
                         <thead>
                             <tr>
-                                <th>POLICY_NO</th>
+                                <th id="key-header">POLICY_NO</th>
                                 <th>Поле</th>
                                 <th>Тип различия</th>
                                 <th id="value-header-a">Значение файла 1</th>
@@ -95,7 +95,7 @@
             </section>
         </main>
         <footer class="footer">
-            <p>CSV Check Pro © 2024. Работает прямо в браузере, данные не покидают ваш компьютер.</p>
+            <p>File cheker © 2024 by Liza. Работает прямо в браузере, данные не покидают ваш компьютер.</p>
         </footer>
     </div>
 </body>
