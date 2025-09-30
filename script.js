@@ -8,6 +8,7 @@ const valueHeaderB = document.getElementById('value-header-b');
 const summaryBlock = document.getElementById('summary');
 const errorBlock = document.getElementById('form-error');
 const downloadReportButton = document.getElementById('download-report');
+const downloadDetailedReportButton = document.getElementById('download-detailed-report');
 const loadingIndicator = document.getElementById('loading-indicator');
 
 let lastDifferences = [];
@@ -32,6 +33,7 @@ form.addEventListener('submit', async (event) => {
     }
 
     downloadReportButton.disabled = true;
+    downloadDetailedReportButton.disabled = true;
     showLoadingIndicator();
 
     try {
@@ -47,12 +49,17 @@ form.addEventListener('submit', async (event) => {
 
         renderDifferences(result.differences, result.headers);
         renderSummary(result.summaryText);
-        downloadReportButton.disabled = result.differences.length === 0;
+        const hasDifferences = result.differences.length > 0;
+        downloadReportButton.disabled = !hasDifferences;
+        downloadDetailedReportButton.disabled = !hasDifferences;
     } catch (error) {
         console.error(error);
         resetTable();
         lastDifferences = [];
+        lastFileNameA = '';
+        lastFileNameB = '';
         downloadReportButton.disabled = true;
+        downloadDetailedReportButton.disabled = true;
         renderSummary('');
         showError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -67,6 +74,18 @@ downloadReportButton.addEventListener('click', () => {
     try {
         const csvContent = buildAggregatedReport(lastDifferences);
         triggerCsvDownload(csvContent, `csv-check-pro-report-${Date.now()}.csv`);
+    } catch (error) {
+        showError(error instanceof Error ? error.message : String(error));
+    }
+});
+
+downloadDetailedReportButton.addEventListener('click', () => {
+    if (!lastDifferences.length) {
+        return;
+    }
+    try {
+        const csvContent = buildDetailedReport(lastDifferences, lastFileNameA, lastFileNameB);
+        triggerCsvDownload(csvContent, `csv-check-pro-detailed-${Date.now()}.csv`);
     } catch (error) {
         showError(error instanceof Error ? error.message : String(error));
     }
@@ -340,6 +359,44 @@ function buildAggregatedReport(differences) {
             missingB
         ].join(','));
     }
+    return rows.join('\r\n');
+}
+
+/**
+ * Построить подробный CSV-отчёт, повторяющий таблицу различий.
+ * @param {Array<Record<string, string>>} differences
+ * @param {string} nameA
+ * @param {string} nameB
+ */
+function buildDetailedReport(differences, nameA, nameB) {
+    if (!differences.length) {
+        throw new Error('Отчёт нельзя сохранить: различия отсутствуют.');
+    }
+
+    const headers = [
+        'POLICY_NO',
+        'Поле',
+        'Тип различия',
+        `Значение ${nameA}`,
+        `Значение ${nameB}`
+    ];
+    const rows = [headers.map(escapeCsvValue).join(',')];
+
+    for (const diff of differences) {
+        const fieldName = diff.column === '__missing__' ? 'Строка отсутствует' : diff.column;
+        const typeLabel = labelForDifference(diff.difference_type);
+        const valueA = diff.value_a || '—';
+        const valueB = diff.value_b || '—';
+        const row = [
+            escapeCsvValue(diff.POLICY_NO),
+            escapeCsvValue(fieldName),
+            escapeCsvValue(typeLabel),
+            escapeCsvValue(valueA),
+            escapeCsvValue(valueB)
+        ].join(',');
+        rows.push(row);
+    }
+
     return rows.join('\r\n');
 }
 
