@@ -20,7 +20,7 @@ from tkinter import filedialog, messagebox, ttk
 class Difference:
     """Represents a difference between two CSV files."""
 
-    policy_no: str
+    POLICY_NO: str
     column: str
     value_a: str
     value_b: str
@@ -131,7 +131,7 @@ def write_field_report(
 def compare_csv_files(
     file_path_a: str,
     file_path_b: str,
-    key_field: str = "Policy_no",
+    key_field: str = "POLICY_NO",
 ) -> List[Difference]:
     """Compare two CSV files and return a list of differences."""
     rows_a = read_csv_sorted(file_path_a, key_field)
@@ -184,7 +184,7 @@ def compare_csv_files(
         if row_a is None:
             differences.append(
                 Difference(
-                    policy_no=key,
+                    POLICY_NO=key,
                     column="__missing__",
                     value_a=f"Нет записи в {os.path.basename(file_path_a)}",
                     value_b=(
@@ -197,7 +197,7 @@ def compare_csv_files(
         if row_b is None:
             differences.append(
                 Difference(
-                    policy_no=key,
+                    POLICY_NO=key,
                     column="__missing__",
                     value_a=f"Данные файла 1: {row_preview(row_a)}",
                     value_b=f"Нет записи в {os.path.basename(file_path_b)}",
@@ -214,7 +214,7 @@ def compare_csv_files(
             if value_a != value_b:
                 differences.append(
                     Difference(
-                        policy_no=key,
+                        POLICY_NO=key,
                         column=column,
                         value_a=value_a,
                         value_b=value_b,
@@ -230,13 +230,13 @@ class CsvComparatorApp(tk.Tk):
 
     def __init__(self) -> None:
         super().__init__()
-        self.title("Сравнение CSV по Policy_no")
-        self.geometry("900x600")
+        self.title("Сравнение CSV")
+        self.geometry("1000x600")
         self.minsize(700, 500)
 
         self.file_path_a = tk.StringVar()
         self.file_path_b = tk.StringVar()
-        self.key_field = tk.StringVar(value="Policy_no")
+        self.key_field = tk.StringVar(value="POLICY_NO")
         self.differences: List[Difference] = []
         self.last_file_name_a = ""
         self.last_file_name_b = ""
@@ -276,14 +276,14 @@ class CsvComparatorApp(tk.Tk):
             command=self.compare_and_display,
         ).pack(side=tk.RIGHT, padx=(10, 10))
 
-        columns = ("policy_no", "column", "difference", "value_a", "value_b")
+        columns = ("POLICY_NO", "column", "difference", "value_a", "value_b")
         self.tree = ttk.Treeview(
             main_frame,
             columns=columns,
             show="headings",
         )
         self.headings = {
-            "policy_no": "Policy_no",
+            "POLICY_NO": "POLICY_NO",
             "column": "Поле",
             "difference": "Тип различия",
             "value_a": "Значение файла 1",
@@ -416,7 +416,7 @@ class CsvComparatorApp(tk.Tk):
                 "",
                 tk.END,
                 values=(
-                    diff.policy_no,
+                    diff.POLICY_NO,
                     column_label,
                     difference_label,
                     diff.value_a,
