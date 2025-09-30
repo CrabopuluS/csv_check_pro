@@ -26,6 +26,12 @@ class Difference:
     value_b: str
     difference_type: str
 
+    @property
+    def policy_no(self) -> str:
+        """Backward compatible alias for the policy number field."""
+
+        return self.POLICY_NO
+
 
 VALUE_MISMATCH = "value_mismatch"
 MISSING_IN_A = "missing_in_a"
@@ -45,12 +51,15 @@ def read_csv_sorted(file_path: str, key_field: str) -> List[Dict[str, str]]:
         reader = csv.DictReader(csv_file)
         if reader.fieldnames is None:
             raise CsvComparisonError("CSV файл не содержит заголовков.")
-        if key_field not in reader.fieldnames:
-            raise CsvComparisonError(
-                f"В файле {file_path} отсутствует ключевой столбец '{key_field}'."
-            )
 
-        rows = [row for row in reader]
+        actual_key_field = _resolve_key_field(reader.fieldnames, key_field, file_path)
+
+        rows = []
+        for row in reader:
+            if actual_key_field != key_field:
+                value = row.pop(actual_key_field, "")
+                row[key_field] = value
+            rows.append(row)
 
     try:
         rows.sort(key=lambda row: row.get(key_field, ""))
@@ -60,6 +69,24 @@ def read_csv_sorted(file_path: str, key_field: str) -> List[Dict[str, str]]:
         ) from error
 
     return rows
+
+
+def _resolve_key_field(
+    fieldnames: Sequence[str], key_field: str, file_path: str
+) -> str:
+    """Return actual column name that matches the provided key (case insensitive)."""
+
+    for field in fieldnames:
+        if field == key_field:
+            return field
+    key_lower = key_field.casefold()
+    for field in fieldnames:
+        if field.casefold() == key_lower:
+            return field
+
+    raise CsvComparisonError(
+        f"В файле {file_path} отсутствует ключевой столбец '{key_field}'."
+    )
 
 
 def detect_duplicate_keys(rows: Iterable[Dict[str, str]], key_field: str) -> List[str]:
