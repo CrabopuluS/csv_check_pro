@@ -1,20 +1,71 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
-  <!-- cat with pleading eyes -->
-  <rect x="10" y="5" width="12" height="8" fill="#111"/>
-  <rect x="10" y="3" width="3" height="3" fill="#111"/>
-  <rect x="19" y="3" width="3" height="3" fill="#111"/>
-  <rect x="9" y="13" width="14" height="7" fill="#111"/>
-  <rect x="22" y="14" width="2" height="6" fill="#111"/>
-  <!-- eyes: big sparkle -->
-  <rect x="12" y="9" width="3" height="2" fill="#b4f0a7"/>
-  <rect x="17" y="9" width="3" height="2" fill="#b4f0a7"/>
-  <rect x="13" y="10" width="1" height="1" fill="#000"/>
-  <rect x="18" y="10" width="1" height="1" fill="#000"/>
-  <!-- tiny mouth -->
-  <rect x="15" y="12" width="2" height="1" fill="#333"/>
-  <!-- empty bowl -->
-  <rect x="6" y="22" width="10" height="2" fill="#888"/>
-  <rect x="7" y="21" width="8" height="1" fill="#aaa"/>
-  <!-- emphasis: "empty" shine -->
-  <rect x="9" y="21" width="2" height="1" fill="#e0e0e0"/>
+  <rect width="32" height="32" fill="#20242f" />
+  <rect x="0" y="21" width="32" height="11" fill="#252b39" />
+  <!-- bowl -->
+  <g fill="#445c8a">
+    <rect x="6" y="23" width="12" height="4" />
+    <rect x="5" y="24" width="14" height="2" />
+  </g>
+  <g fill="#5d79b0">
+    <rect x="7" y="24" width="10" height="1" />
+    <rect x="8" y="25" width="8" height="1" />
+  </g>
+  <rect x="10" y="22" width="4" height="1" fill="#89a6df" />
+  <!-- cat outline -->
+  <g fill="#39231d">
+    <rect x="12" y="7" width="9" height="7" />
+    <rect x="11" y="9" width="11" height="11" />
+    <rect x="10" y="13" width="13" height="8" />
+    <rect x="11" y="19" width="11" height="6" />
+    <rect x="23" y="16" width="2" height="7" />
+    <rect x="24" y="18" width="3" height="5" />
+    <rect x="9" y="17" width="3" height="5" />
+    <rect x="8" y="18" width="3" height="4" />
+    <rect x="21" y="6" width="2" height="4" />
+    <rect x="13" y="5" width="3" height="3" />
+    <rect x="18" y="5" width="3" height="3" />
+  </g>
+  <!-- cat fur -->
+  <g fill="#f9d8b7">
+    <rect x="13" y="6" width="7" height="1" />
+    <rect x="12" y="7" width="9" height="7" />
+    <rect x="11" y="9" width="11" height="9" />
+    <rect x="12" y="17" width="9" height="6" />
+    <rect x="13" y="18" width="7" height="5" />
+    <rect x="14" y="19" width="5" height="4" />
+    <rect x="10" y="19" width="3" height="3" />
+    <rect x="23" y="19" width="2" height="3" />
+  </g>
+  <g fill="#d9b28b">
+    <rect x="12" y="15" width="3" height="2" />
+    <rect x="19" y="15" width="3" height="2" />
+    <rect x="13" y="18" width="2" height="2" />
+    <rect x="18" y="18" width="2" height="2" />
+    <rect x="14" y="20" width="4" height="1" />
+    <rect x="23" y="20" width="1" height="1" />
+  </g>
+  <g fill="#fff1dc">
+    <rect x="15" y="15" width="4" height="3" />
+    <rect x="16" y="14" width="2" height="1" />
+    <rect x="15" y="18" width="4" height="1" />
+  </g>
+  <!-- face -->
+  <rect x="15" y="11" width="2" height="2" fill="#1b1d24" />
+  <rect x="19" y="11" width="2" height="2" fill="#1b1d24" />
+  <rect x="16" y="11" width="1" height="1" fill="#9de6c0" />
+  <rect x="20" y="11" width="1" height="1" fill="#9de6c0" />
+  <rect x="15" y="13" width="7" height="1" fill="#3a1f14" />
+  <rect x="16" y="14" width="5" height="1" fill="#3a1f14" />
+  <rect x="17" y="15" width="3" height="1" fill="#d06c62" />
+  <rect x="17" y="16" width="3" height="1" fill="#a84a4a" />
+  <!-- pleading paw -->
+  <g fill="#f9d8b7">
+    <rect x="8" y="21" width="4" height="2" />
+    <rect x="7" y="22" width="5" height="2" />
+    <rect x="6" y="23" width="4" height="2" />
+  </g>
+  <!-- tear -->
+  <rect x="14" y="13" width="1" height="2" fill="#75b6ff">
+    <animate attributeName="y" values="13;14;13" dur="1.5s" repeatCount="indefinite" />
+  </rect>
 </svg>
