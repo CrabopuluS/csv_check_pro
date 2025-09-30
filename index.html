@@ -15,8 +15,23 @@
     <div class="page">
         <header class="hero">
             <div class="hero__content">
+                <div class="hero__badge" aria-hidden="true">Новый облик CSV Check Pro</div>
                 <h1>CSV Check Pro</h1>
-                <p>Загружайте два CSV-файла, выбирайте ключевой столбец и мгновенно получайте отчёт о расхождениях прямо в браузере.</p>
+                <p class="hero__tagline">Премиальный сервис для точного сравнения CSV, созданный для команд, которые ценят скорость, контроль и стиль.</p>
+                <ul class="hero__features" aria-label="Преимущества CSV Check Pro">
+                    <li class="hero__feature">
+                        <span class="hero__feature-icon" aria-hidden="true">⚡</span>
+                        <span>Мгновенная проверка тысяч строк прямо в браузере</span>
+                    </li>
+                    <li class="hero__feature">
+                        <span class="hero__feature-icon" aria-hidden="true">🔒</span>
+                        <span>Данные не покидают ваш компьютер и остаются под контролем</span>
+                    </li>
+                    <li class="hero__feature">
+                        <span class="hero__feature-icon" aria-hidden="true">📊</span>
+                        <span>Фирменные отчёты: сводный и подробный экспорт различий</span>
+                    </li>
+                </ul>
             </div>
         </header>
         <main class="container">
@@ -38,7 +53,8 @@
                     </div>
                     <div class="form__actions">
                         <button type="submit" class="button button--primary">Сравнить</button>
-                        <button type="button" id="download-report" class="button button--ghost" disabled>Скачать отчёт</button>
+                        <button type="button" id="download-report" class="button button--ghost" disabled>Скачать сводный отчёт</button>
+                        <button type="button" id="download-detailed-report" class="button button--outline" disabled>Скачать подробный отчёт</button>
                     </div>
                 </form>
                 <div id="form-error" class="alert alert--error" role="alert" hidden></div>
