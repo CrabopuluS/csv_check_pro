@@ -6,6 +6,21 @@ const TABLE_FORMATS = {
     xlsx: { label: 'Excel (.xlsx)', extensions: ['.xlsx'], accept: '.xlsx', reader: readExcelFile },
     xls: { label: 'Excel 97-2003 (.xls)', extensions: ['.xls'], accept: '.xls', reader: readExcelFile }
 };
+const REPORT_FORMATS = {
+    xlsx: {
+        extension: 'xlsx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    },
+    csv: {
+        extension: 'csv',
+        mimeType: 'text/csv;charset=utf-8;'
+    },
+    txt: {
+        extension: 'txt',
+        mimeType: 'text/plain;charset=utf-8;'
+    }
+};
+const DEFAULT_REPORT_FORMAT = 'xlsx';
 
 const LAST_SCENE_STORAGE_KEY = 'csv-check-pro:last-cat-scene';
 
@@ -86,6 +101,7 @@ const form = document.getElementById('compare-form');
 const fileInputA = document.getElementById('fileA');
 const fileInputB = document.getElementById('fileB');
 const tableFormatSelect = document.getElementById('tableFormat');
+const reportFormatSelect = document.getElementById('reportFormat');
 const keyFieldInput = document.getElementById('keyField');
 const keyHeader = document.getElementById('key-header');
 const tableBody = document.querySelector('#results-table tbody');
@@ -187,8 +203,7 @@ downloadReportButton.addEventListener('click', () => {
         return;
     }
     try {
-        const csvContent = buildAggregatedReport(lastDifferences);
-        triggerCsvDownload(csvContent, `csv-check-pro-report-${Date.now()}.csv`);
+        handleReportDownload('aggregated');
     } catch (error) {
         showError(error instanceof Error ? error.message : String(error));
     }
@@ -199,12 +214,153 @@ downloadDetailedReportButton.addEventListener('click', () => {
         return;
     }
     try {
-        const csvContent = buildDetailedReport(lastDifferences, lastFileNameA, lastFileNameB, lastKeyFieldName);
-        triggerCsvDownload(csvContent, `csv-check-pro-detailed-${Date.now()}.csv`);
+        handleReportDownload('detailed');
     } catch (error) {
         showError(error instanceof Error ? error.message : String(error));
     }
 });
+
+/**
+ * Обработать запрос на выгрузку отчёта в выбранном формате.
+ * @param {'aggregated'|'detailed'} type
+ */
+function handleReportDownload(type) {
+    const format = getSelectedReportFormat();
+    const rows = type === 'aggregated'
+        ? buildAggregatedReportData(lastDifferences)
+        : buildDetailedReportData(lastDifferences, lastFileNameA, lastFileNameB, lastKeyFieldName);
+    const timestamp = Date.now();
+    const baseName = type === 'aggregated'
+        ? `csv-check-pro-report-${timestamp}`
+        : `csv-check-pro-detailed-${timestamp}`;
+    const sheetName = type === 'aggregated' ? 'Сводный отчёт' : 'Подробный отчёт';
+    triggerReportDownload(rows, format, baseName, sheetName);
+}
+
+/**
+ * Получить выбранный пользователем формат отчёта.
+ * @returns {'xlsx'|'csv'|'txt'}
+ */
+function getSelectedReportFormat() {
+    const rawValue = reportFormatSelect?.value ?? DEFAULT_REPORT_FORMAT;
+    if (REPORT_FORMATS[rawValue]) {
+        return rawValue;
+    }
+    if (reportFormatSelect) {
+        reportFormatSelect.value = DEFAULT_REPORT_FORMAT;
+    }
+    return DEFAULT_REPORT_FORMAT;
+}
+
+/**
+ * Запустить скачивание отчёта в указанном формате.
+ * @param {Array<Array<string>>} rows
+ * @param {'xlsx'|'csv'|'txt'} format
+ * @param {string} filenameBase
+ * @param {string} sheetName
+ */
+function triggerReportDownload(rows, format, filenameBase, sheetName = 'Отчёт') {
+    const formatConfig = REPORT_FORMATS[format] ?? REPORT_FORMATS[DEFAULT_REPORT_FORMAT];
+    const safeBaseName = sanitizeFilename(filenameBase);
+
+    if (format === 'xlsx') {
+        downloadXlsxReport(rows, `${safeBaseName}.${formatConfig.extension}`, sheetName, formatConfig.mimeType);
+        return;
+    }
+
+    if (format === 'csv') {
+        const content = convertRowsToCsv(rows);
+        triggerBlobDownload(content, formatConfig.mimeType, `${safeBaseName}.${formatConfig.extension}`);
+        return;
+    }
+
+    if (format === 'txt') {
+        const content = convertRowsToTxt(rows);
+        triggerBlobDownload(content, formatConfig.mimeType, `${safeBaseName}.${formatConfig.extension}`);
+        return;
+    }
+
+    const fallbackContent = convertRowsToCsv(rows);
+    triggerBlobDownload(fallbackContent, REPORT_FORMATS.csv.mimeType, `${safeBaseName}.${REPORT_FORMATS.csv.extension}`);
+}
+
+/**
+ * Скачать отчёт в формате XLSX.
+ * @param {Array<Array<string>>} rows
+ * @param {string} filename
+ * @param {string} sheetName
+ * @param {string} mimeType
+ */
+function downloadXlsxReport(rows, filename, sheetName, mimeType) {
+    if (typeof XLSX === 'undefined') {
+        throw new Error('Невозможно сформировать Excel-файл: библиотека XLSX не загружена. Обновите страницу и попробуйте снова.');
+    }
+    const safeSheetName = (sheetName || 'Отчёт').replace(/[\\/*?:\[\]]/g, ' ').trim().slice(0, 31) || 'Отчёт';
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
+    const arrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    triggerBlobDownload(arrayBuffer, mimeType, filename);
+}
+
+/**
+ * Преобразовать массив строк отчёта в CSV-представление.
+ * @param {Array<Array<string>>} rows
+ */
+function convertRowsToCsv(rows) {
+    // Пример: convertRowsToCsv([['Поле', 'Всего'], ['age', '3']]);
+    return rows
+        .map((row) => row.map((cell) => escapeCsvValue(cell ?? '')).join(','))
+        .join('\r\n');
+}
+
+/**
+ * Преобразовать массив строк отчёта в текстовое представление.
+ * @param {Array<Array<string>>} rows
+ */
+function convertRowsToTxt(rows) {
+    // Пример: convertRowsToTxt([['Поле', 'Всего'], ['age', '3']]);
+    return rows
+        .map((row) => row.map((cell) => sanitizeTextValue(cell)).join('\t'))
+        .join('\r\n');
+}
+
+/**
+ * Очистить значение текстовой ячейки от перевода строки.
+ * @param {string} value
+ */
+function sanitizeTextValue(value) {
+    const stringValue = String(value ?? '');
+    return stringValue.replace(/[\r\n\t]+/g, ' ');
+}
+
+/**
+ * Вспомогательная функция скачивания содержимого как файла.
+ * @param {string|ArrayBuffer|Blob} data
+ * @param {string} mimeType
+ * @param {string} filename
+ */
+function triggerBlobDownload(data, mimeType, filename) {
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', sanitizeFilename(filename));
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Очистить имя файла для безопасного скачивания.
+ * @param {string} filename
+ */
+function sanitizeFilename(filename) {
+    const normalized = String(filename ?? 'report');
+    return normalized.replace(/[^\w.\-]+/g, '_') || 'report';
+}
 
 /**
  * Прочитать табличный файл в зависимости от выбранного формата.
@@ -660,10 +816,10 @@ function buildSummary(differences, nameA, nameB, keyField) {
 }
 
 /**
- * Построить CSV-отчёт по полям.
+ * Построить табличные данные для сводного отчёта по полям.
  * @param {Array<Record<string, string>>} differences
  */
-function buildAggregatedReport(differences) {
+function buildAggregatedReportData(differences) {
     if (!differences.length) {
         throw new Error('Отчёт нельзя сохранить: различия отсутствуют.');
     }
@@ -681,61 +837,64 @@ function buildAggregatedReport(differences) {
         }
         counter.set(fieldName, current);
     }
-    const headers = ['Поле', 'Всего расхождений', 'Несовпадений значений', 'Отсутствует в файле 1', 'Отсутствует в файле 2'];
-    const rows = [headers.join(',')];
+    const rows = [[
+        'Поле',
+        'Всего расхождений',
+        'Несовпадений значений',
+        'Отсутствует в файле 1',
+        'Отсутствует в файле 2'
+    ]];
     const sortedFields = Array.from(counter.keys()).sort();
     for (const field of sortedFields) {
         const { total, mismatch, missingA, missingB } = counter.get(field);
         rows.push([
-            escapeCsvValue(field),
-            total,
-            mismatch,
-            missingA,
-            missingB
-        ].join(','));
+            field,
+            String(total),
+            String(mismatch),
+            String(missingA),
+            String(missingB)
+        ]);
     }
-    return rows.join('\r\n');
+    return rows;
 }
 
 /**
- * Построить подробный CSV-отчёт, повторяющий таблицу различий.
+ * Построить табличные данные подробного отчёта, повторяющего таблицу различий.
  * @param {Array<Record<string, string>>} differences
  * @param {string} nameA
  * @param {string} nameB
  * @param {string} keyField
  */
-function buildDetailedReport(differences, nameA, nameB, keyField) {
+function buildDetailedReportData(differences, nameA, nameB, keyField) {
     if (!differences.length) {
         throw new Error('Отчёт нельзя сохранить: различия отсутствуют.');
     }
 
     const effectiveKeyField = keyField || DEFAULT_KEY_HEADER;
 
-    const headers = [
+    const rows = [[
         effectiveKeyField,
         'Поле',
         'Тип различия',
         `Значение ${nameA}`,
         `Значение ${nameB}`
-    ];
-    const rows = [headers.map(escapeCsvValue).join(',')];
+    ]];
 
     for (const diff of differences) {
         const fieldName = diff.column === '__missing__' ? 'Строка отсутствует' : diff.column;
         const typeLabel = labelForDifference(diff.difference_type);
         const valueA = diff.value_a || '—';
         const valueB = diff.value_b || '—';
-        const row = [
-            escapeCsvValue(diff.keyValue),
-            escapeCsvValue(fieldName),
-            escapeCsvValue(typeLabel),
-            escapeCsvValue(valueA),
-            escapeCsvValue(valueB)
-        ].join(',');
-        rows.push(row);
+        rows.push([
+            diff.keyValue,
+            fieldName,
+            typeLabel,
+            valueA,
+            valueB
+        ]);
     }
 
-    return rows.join('\r\n');
+    return rows;
 }
 
 /**
@@ -748,25 +907,6 @@ function escapeCsvValue(value) {
         return `"${stringValue.replace(/"/g, '""')}"`;
     }
     return stringValue;
-}
-
-/**
- * Скачать CSV-файл через создание временной ссылки.
- * @param {string} content
- * @param {string} filename
- */
-function triggerCsvDownload(content, filename) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const safeFilename = filename.replace(/[^\w.\-]+/g, '_');
-    link.setAttribute('download', safeFilename);
-    link.rel = 'noopener';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
 }
 
 /**
