@@ -1,5 +1,6 @@
 const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024; // 1 ГБ
 const DEFAULT_KEY_HEADER = 'POLICY_NO';
+const RESERVED_COLUMN_NAMES = new Set(['__proto__', 'prototype', 'constructor']);
 const TABLE_FORMATS = {
     csv: { label: 'CSV (.csv)', extensions: ['.csv'], accept: '.csv', reader: readDelimitedFile },
     txt: { label: 'Текстовый (.txt)', extensions: ['.txt'], accept: '.txt', reader: readDelimitedFile },
@@ -97,33 +98,140 @@ const CAT_SCENES = [
     }
 ];
 
-const form = document.getElementById('compare-form');
-const fileInputA = document.getElementById('fileA');
-const fileInputB = document.getElementById('fileB');
-const tableFormatSelect = document.getElementById('tableFormat');
-const reportFormatSelect = document.getElementById('reportFormat');
-const keyFieldInput = document.getElementById('keyField');
-const keyHeader = document.getElementById('key-header');
-const tableBody = document.querySelector('#results-table tbody');
-const valueHeaderA = document.getElementById('value-header-a');
-const valueHeaderB = document.getElementById('value-header-b');
-const summaryBlock = document.getElementById('summary');
-const errorBlock = document.getElementById('form-error');
-const downloadReportButton = document.getElementById('download-report');
-const downloadDetailedReportButton = document.getElementById('download-detailed-report');
-const loadingIndicator = document.getElementById('loading-indicator');
+let form;
+let fileInputA;
+let fileInputB;
+let tableFormatSelect;
+let reportFormatSelect;
+let keyFieldInput;
+let keyHeader;
+let tableBody;
+let valueHeaderA;
+let valueHeaderB;
+let summaryBlock;
+let errorBlock;
+let downloadReportButton;
+let downloadDetailedReportButton;
+let loadingIndicator;
 
 let lastDifferences = [];
 let lastFileNameA = '';
 let lastFileNameB = '';
 let lastKeyFieldName = '';
 
-initializeFormatHandling();
-initializeCatMascot();
+if (typeof document !== 'undefined') {
+    form = document.getElementById('compare-form');
+    fileInputA = document.getElementById('fileA');
+    fileInputB = document.getElementById('fileB');
+    tableFormatSelect = document.getElementById('tableFormat');
+    reportFormatSelect = document.getElementById('reportFormat');
+    keyFieldInput = document.getElementById('keyField');
+    keyHeader = document.getElementById('key-header');
+    tableBody = document.querySelector('#results-table tbody');
+    valueHeaderA = document.getElementById('value-header-a');
+    valueHeaderB = document.getElementById('value-header-b');
+    summaryBlock = document.getElementById('summary');
+    errorBlock = document.getElementById('form-error');
+    downloadReportButton = document.getElementById('download-report');
+    downloadDetailedReportButton = document.getElementById('download-detailed-report');
+    loadingIndicator = document.getElementById('loading-indicator');
+
+    initializeFormatHandling();
+    initializeCatMascot();
+
+    form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        hideError();
+
+        const fileA = fileInputA?.files?.[0];
+        const fileB = fileInputB?.files?.[0];
+        const keyField = keyFieldInput?.value.trim();
+        const format = tableFormatSelect?.value;
+
+        try {
+            validateFormInput(fileA, fileB, keyField, format);
+        } catch (validationError) {
+            showError(validationError instanceof Error ? validationError.message : String(validationError));
+            return;
+        }
+
+        if (downloadReportButton) {
+            downloadReportButton.disabled = true;
+        }
+        if (downloadDetailedReportButton) {
+            downloadDetailedReportButton.disabled = true;
+        }
+        showLoadingIndicator();
+
+        try {
+            const [datasetA, datasetB] = await Promise.all([
+                readTableFile(fileA, format),
+                readTableFile(fileB, format)
+            ]);
+
+            const result = compareDatasets(datasetA, datasetB, keyField, fileA.name, fileB.name);
+            lastDifferences = result.differences;
+            lastFileNameA = fileA.name;
+            lastFileNameB = fileB.name;
+            lastKeyFieldName = result.keyField;
+
+            renderDifferences(result.differences, result.headers);
+            renderSummary(result.summaryText);
+            const hasDifferences = result.differences.length > 0;
+            if (downloadReportButton) {
+                downloadReportButton.disabled = !hasDifferences;
+            }
+            if (downloadDetailedReportButton) {
+                downloadDetailedReportButton.disabled = !hasDifferences;
+            }
+        } catch (error) {
+            console.error(error);
+            resetTable();
+            lastDifferences = [];
+            lastFileNameA = '';
+            lastFileNameB = '';
+            lastKeyFieldName = '';
+            if (downloadReportButton) {
+                downloadReportButton.disabled = true;
+            }
+            if (downloadDetailedReportButton) {
+                downloadDetailedReportButton.disabled = true;
+            }
+            renderSummary('');
+            showError(error instanceof Error ? error.message : String(error));
+        } finally {
+            hideLoadingIndicator();
+        }
+    });
+
+    downloadReportButton?.addEventListener('click', () => {
+        if (!lastDifferences.length) {
+            return;
+        }
+        try {
+            handleReportDownload('aggregated');
+        } catch (error) {
+            showError(error instanceof Error ? error.message : String(error));
+        }
+    });
+
+    downloadDetailedReportButton?.addEventListener('click', () => {
+        if (!lastDifferences.length) {
+            return;
+        }
+        try {
+            handleReportDownload('detailed');
+        } catch (error) {
+            showError(error instanceof Error ? error.message : String(error));
+        }
+    });
+}
 
 function validateFormInput(fileA, fileB, keyField, format) {
-    const formatConfig = TABLE_FORMATS[format];
-    if (!formatConfig) {
+    const hasExplicitFormat = typeof format === 'string';
+    const resolvedFormat = hasExplicitFormat && format in TABLE_FORMATS ? format : 'csv';
+    const formatConfig = TABLE_FORMATS[resolvedFormat];
+    if (!formatConfig || (hasExplicitFormat && !(format in TABLE_FORMATS))) {
         throw new Error('Выбран неподдерживаемый формат файлов.');
     }
     if (!fileA || !fileB) {
@@ -144,81 +252,6 @@ function validateFormInput(fileA, fileB, keyField, format) {
         }
     });
 }
-
-form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    hideError();
-
-    const fileA = fileInputA.files[0];
-    const fileB = fileInputB.files[0];
-    const keyField = keyFieldInput.value.trim();
-    const format = tableFormatSelect.value;
-
-    try {
-        validateFormInput(fileA, fileB, keyField, format);
-    } catch (validationError) {
-        showError(validationError instanceof Error ? validationError.message : String(validationError));
-        return;
-    }
-
-    downloadReportButton.disabled = true;
-    downloadDetailedReportButton.disabled = true;
-    showLoadingIndicator();
-
-    try {
-        const [datasetA, datasetB] = await Promise.all([
-            readTableFile(fileA, format),
-            readTableFile(fileB, format)
-        ]);
-
-        const result = compareDatasets(datasetA, datasetB, keyField, fileA.name, fileB.name);
-        lastDifferences = result.differences;
-        lastFileNameA = fileA.name;
-        lastFileNameB = fileB.name;
-        lastKeyFieldName = result.keyField;
-
-        renderDifferences(result.differences, result.headers);
-        renderSummary(result.summaryText);
-        const hasDifferences = result.differences.length > 0;
-        downloadReportButton.disabled = !hasDifferences;
-        downloadDetailedReportButton.disabled = !hasDifferences;
-    } catch (error) {
-        console.error(error);
-        resetTable();
-        lastDifferences = [];
-        lastFileNameA = '';
-        lastFileNameB = '';
-        lastKeyFieldName = '';
-        downloadReportButton.disabled = true;
-        downloadDetailedReportButton.disabled = true;
-        renderSummary('');
-        showError(error instanceof Error ? error.message : String(error));
-    } finally {
-        hideLoadingIndicator();
-    }
-});
-
-downloadReportButton.addEventListener('click', () => {
-    if (!lastDifferences.length) {
-        return;
-    }
-    try {
-        handleReportDownload('aggregated');
-    } catch (error) {
-        showError(error instanceof Error ? error.message : String(error));
-    }
-});
-
-downloadDetailedReportButton.addEventListener('click', () => {
-    if (!lastDifferences.length) {
-        return;
-    }
-    try {
-        handleReportDownload('detailed');
-    } catch (error) {
-        showError(error instanceof Error ? error.message : String(error));
-    }
-});
 
 /**
  * Обработать запрос на выгрузку отчёта в выбранном формате.
@@ -341,6 +374,9 @@ function sanitizeTextValue(value) {
  * @param {string} filename
  */
 function triggerBlobDownload(data, mimeType, filename) {
+    if (typeof document === 'undefined') {
+        throw new Error('Скачивание файлов доступно только в браузере.');
+    }
     const blob = data instanceof Blob ? data : new Blob([data], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -358,8 +394,11 @@ function triggerBlobDownload(data, mimeType, filename) {
  * @param {string} filename
  */
 function sanitizeFilename(filename) {
-    const normalized = String(filename ?? 'report');
-    return normalized.replace(/[^\w.\-]+/g, '_') || 'report';
+    const normalized = String(filename ?? 'report').trim();
+    const withoutPath = normalized.split(/[\\/]+/).filter(Boolean).pop() ?? 'report';
+    const sanitized = withoutPath.replace(/[^\w.\-]+/g, '_');
+    const withoutLeadingDots = sanitized.replace(/^\.+/, '');
+    return withoutLeadingDots || 'report';
 }
 
 /**
@@ -369,8 +408,10 @@ function sanitizeFilename(filename) {
  * @returns {Promise<{ rows: Array<Record<string, string>> }>}
  */
 function readTableFile(file, format) {
-    const formatConfig = TABLE_FORMATS[format];
-    if (!formatConfig) {
+    const hasExplicitFormat = typeof format === 'string';
+    const resolvedFormat = hasExplicitFormat && format in TABLE_FORMATS ? format : 'csv';
+    const formatConfig = TABLE_FORMATS[resolvedFormat];
+    if (!formatConfig || (hasExplicitFormat && !(format in TABLE_FORMATS))) {
         return Promise.reject(new Error('Формат файлов не поддерживается.'));
     }
     return formatConfig.reader(file, formatConfig);
@@ -501,23 +542,25 @@ function sanitizeRows(rows) {
     return rows
         .map((row) => {
             const source = row && typeof row === 'object' ? row : {};
-            const entries = Object.entries(source)
-                .map(([column, value]) => {
-                    const trimmedColumn = typeof column === 'string' ? column.trim() : String(column ?? '').trim();
-                    if (!trimmedColumn) {
-                        return null;
-                    }
-                    const normalizedValue = typeof value === 'string' ? value : String(value ?? '');
-                    return [trimmedColumn, normalizedValue];
-                })
-                .filter(Boolean);
+            const entries = [];
+            for (const [column, value] of Object.entries(source)) {
+                const trimmedColumn = typeof column === 'string' ? column.trim() : String(column ?? '').trim();
+                if (!trimmedColumn) {
+                    continue;
+                }
+                if (RESERVED_COLUMN_NAMES.has(trimmedColumn.toLowerCase())) {
+                    continue;
+                }
+                const normalizedValue = typeof value === 'string' ? value : String(value ?? '');
+                entries.push([trimmedColumn, normalizedValue]);
+            }
             return Object.fromEntries(entries);
         })
         .filter((row) => Object.keys(row).length > 0);
 }
 
 function initializeFormatHandling() {
-    if (!tableFormatSelect) {
+    if (!tableFormatSelect || !fileInputA || !fileInputB) {
         return;
     }
     updateFileInputsAccept(tableFormatSelect.value);
@@ -537,6 +580,9 @@ function initializeFormatHandling() {
 }
 
 function updateFileInputsAccept(format) {
+    if (!fileInputA || !fileInputB) {
+        return;
+    }
     const formatConfig = TABLE_FORMATS[format] ?? TABLE_FORMATS.csv;
     const acceptValue = Array.isArray(formatConfig.accept) ? formatConfig.accept.join(',') : formatConfig.accept;
     if (acceptValue) {
@@ -549,8 +595,12 @@ function updateFileInputsAccept(format) {
 }
 
 function clearFilesAfterFormatChange() {
-    fileInputA.value = '';
-    fileInputB.value = '';
+    if (fileInputA) {
+        fileInputA.value = '';
+    }
+    if (fileInputB) {
+        fileInputB.value = '';
+    }
 }
 
 function isFileOfFormat(file, formatConfig) {
@@ -915,6 +965,9 @@ function escapeCsvValue(value) {
  * @param {{valueA: string, valueB: string}} headers
  */
 function renderDifferences(differences, headers) {
+    if (!tableBody || !keyHeader || !valueHeaderA || !valueHeaderB) {
+        return;
+    }
     tableBody.innerHTML = '';
     keyHeader.textContent = headers.key || DEFAULT_KEY_HEADER;
     valueHeaderA.textContent = headers.valueA;
@@ -1000,6 +1053,9 @@ function labelForDifference(differenceType) {
 }
 
 function renderSummary(text) {
+    if (!summaryBlock) {
+        return;
+    }
     if (!text) {
         summaryBlock.hidden = true;
         summaryBlock.textContent = '';
@@ -1010,6 +1066,9 @@ function renderSummary(text) {
 }
 
 function resetTable() {
+    if (!tableBody || !keyHeader || !valueHeaderA || !valueHeaderB) {
+        return;
+    }
     tableBody.innerHTML = '';
     const row = document.createElement('tr');
     row.classList.add('empty-state');
@@ -1024,21 +1083,33 @@ function resetTable() {
 }
 
 function showError(message) {
+    if (!errorBlock) {
+        return;
+    }
     errorBlock.hidden = false;
     errorBlock.textContent = message;
 }
 
 function hideError() {
+    if (!errorBlock) {
+        return;
+    }
     errorBlock.hidden = true;
     errorBlock.textContent = '';
 }
 
 function showLoadingIndicator() {
+    if (!loadingIndicator) {
+        return;
+    }
     loadingIndicator.hidden = false;
     loadingIndicator.setAttribute('aria-busy', 'true');
 }
 
 function hideLoadingIndicator() {
+    if (!loadingIndicator) {
+        return;
+    }
     loadingIndicator.hidden = true;
     loadingIndicator.removeAttribute('aria-busy');
 }
@@ -1060,3 +1131,18 @@ function runQuickCheck() {
     ] };
     console.log(compareDatasets(datasetA, datasetB, 'POLICY_NO', 'A.csv', 'B.csv'));
 }
+
+export {
+    buildAggregatedReportData,
+    buildDetailedReportData,
+    buildSummary,
+    compareDatasets,
+    convertRowsToCsv,
+    convertRowsToTxt,
+    detectDuplicateKeys,
+    escapeCsvValue,
+    normalizeKeyValue,
+    resolveKeyField,
+    sanitizeFilename,
+    sanitizeRows
+};
