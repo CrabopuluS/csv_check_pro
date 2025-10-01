@@ -50,6 +50,15 @@
                         <p class="field-hint">Выберите формат файлов, которые хотите сравнить.</p>
                     </div>
                     <div class="field-group">
+                        <label for="reportFormat">Формат отчётов</label>
+                        <select id="reportFormat" name="reportFormat">
+                            <option value="xlsx" selected>Excel (.xlsx)</option>
+                            <option value="csv">CSV (.csv)</option>
+                            <option value="txt">Текстовый (.txt)</option>
+                        </select>
+                        <p class="field-hint">Выберите формат выгрузки отчётов о различиях. По умолчанию — Excel.</p>
+                    </div>
+                    <div class="field-group">
                         <label for="fileA">Файл 1</label>
                         <input type="file" id="fileA" name="fileA" accept=".csv" required>
                         <p class="field-hint">Файл в выбранном формате, кодировка UTF-8 для текстовых файлов.</p>
