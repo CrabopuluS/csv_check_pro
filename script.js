@@ -27,74 +27,25 @@ const LAST_SCENE_STORAGE_KEY = 'csv-check-pro:last-cat-scene';
 
 const CAT_SCENES = [
     {
-        id: 'keyboard-yawn',
-        ariaLabel: 'Глянцевый чёрный кот зевает и растянулся на клавиатуре.',
-        image: 'assets/pixel_cat/cat_01_keyboard_yawn.svg',
-        message: 'Лиза выгрузила новый датасет, Руслан чинит код, а я проверяю, чтобы клавиатура оставалась тёплой.',
-        positionClass: 'cat-mascot--top-right cat-mascot--mirrored'
-    },
-    {
-        id: 'keyboard-guard',
-        ariaLabel: 'Чёрный кот охраняет тёплую клавиатуру и довольно мурчит.',
-        image: 'assets/pixel_cat/cat_02_keyboard_warm.svg',
-        message: 'Клавиши нагрел, отчёт проверил, жду награду за бдительность.',
-        positionClass: 'cat-mascot--middle-left'
-    },
-    {
-        id: 'coffee-hug',
-        ariaLabel: 'Чёрный кот обнимает кружку с кофе и греет лапы.',
-        image: 'assets/pixel_cat/cat_03_hug_mug.svg',
-        message: 'Руслан бодрит себя кофе, Лиза — свежим отчётом, а я согреваюсь об кружку и жду апдейтов.',
-        positionClass: 'cat-mascot--middle-right'
-    },
-    {
-        id: 'empty-bowl',
-        ariaLabel: 'Чёрный кот внимательно смотрит на пустую миску и ждёт пополнения.',
-        image: 'assets/pixel_cat/cat_04_empty_bowl.svg',
-        message: 'Проверка данных идёт полным ходом, а миска по-прежнему пуста. Кажется, пора напоминать команде о важном.',
-        positionClass: 'cat-mascot--bottom-left'
-    },
-    {
-        id: 'blanket-cozy',
-        ariaLabel: 'Чёрный кот уютно укутался в плед.',
-        image: 'assets/pixel_cat/cat_05_cozy_blanket.svg',
-        message: 'Лиза строит дашборды, Руслан деплоит, а я тестирую новый плед на совместимость с ленивой жизнью.',
-        positionClass: 'cat-mascot--bottom-right cat-mascot--mirrored'
-    },
-    {
-        id: 'blanket-check',
-        ariaLabel: 'Чёрный кот поднимает лапкой плед и проверяет мягкость.',
-        image: 'assets/pixel_cat/cat_06_blanket_check.svg',
-        message: 'Ревьюю покрытие: плед соответствует требованиям по уюту и безопасности релиза.',
-        positionClass: 'cat-mascot--top-left'
-    },
-    {
-        id: 'monitor-guard',
-        ariaLabel: 'Чёрный кот строго охраняет монитор.',
-        image: 'assets/pixel_cat/cat_07_stern_monitor.svg',
-        message: 'Следующий, кто потревожит мой монитор, будет слушать лекцию о чистом коде от Руслана и о чистом датасете от Лизы.',
+        id: 'desk-analyst',
+        ariaLabel: 'Чёрный кот сидит рядом с ноутбуком и чашкой, следит за данными.',
+        image: 'assets/pixel_cat/cat_mascot.svg',
+        message: 'Слежу, чтобы графики не проседали, а метрики мурлыкали как надо. Если что — лапой по клавиатуре!',
         positionClass: 'cat-mascot--top-right'
     },
     {
-        id: 'warning-poster',
-        ariaLabel: 'Чёрный кот охраняет плакат-предупреждение.',
-        image: 'assets/pixel_cat/cat_08_strict_warning.svg',
-        message: 'На стене список правил. Первое — не ломать прод. Второе — гладить кота. Третье — смотри пункт один.',
-        positionClass: 'cat-mascot--middle-left cat-mascot--mirrored'
+        id: 'desk-guardian',
+        ariaLabel: 'Чёрный кот охраняет ноутбук и внимательно наблюдает за экраном.',
+        image: 'assets/pixel_cat/cat_mascot.svg',
+        message: 'Лиза ревьюит модель, Руслан фикстит баги, а я не пропускаю ни одного подозрительного файла.',
+        positionClass: 'cat-mascot--middle-left'
     },
     {
-        id: 'yarn-play',
-        ariaLabel: 'Чёрный кот играет с клубком пряжи.',
-        image: 'assets/pixel_cat/cat_09_play_yarn.svg',
-        message: 'Лиза ловит аномалии в данных, Руслан — баги в коде, а я ловлю клубок и прячу его в продакшене.',
-        positionClass: 'cat-mascot--middle-right cat-mascot--mirrored'
-    },
-    {
-        id: 'yarn-hide',
-        ariaLabel: 'Чёрный кот прячет клубок в коробке и хитро улыбается.',
-        image: 'assets/pixel_cat/cat_10_hide_yarn_prod.svg',
-        message: 'Клубок успешно замаскирован под релизную коробку. Спрятано на ветке production, не говорите менеджеру.',
-        positionClass: 'cat-mascot--bottom-right'
+        id: 'desk-coffee-break',
+        ariaLabel: 'Чёрный кот устроился на столе рядом с кружкой кофе и мерцающим монитором.',
+        image: 'assets/pixel_cat/cat_mascot.svg',
+        message: 'Данные загружены, кофе горячий, хвост держит баланс. Готов выдать отчёт по первому требованию.',
+        positionClass: 'cat-mascot--bottom-right cat-mascot--mirrored'
     }
 ];
 
