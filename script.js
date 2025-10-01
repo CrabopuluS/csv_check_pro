@@ -1,4 +1,4 @@
-const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024; // 1 ГБ
 const DEFAULT_KEY_HEADER = 'POLICY_NO';
 const TABLE_FORMATS = {
     csv: { label: 'CSV (.csv)', extensions: ['.csv'], accept: '.csv', reader: readDelimitedFile },
@@ -124,7 +124,7 @@ function validateFormInput(fileA, fileB, keyField, format) {
             throw new Error(`Файл ${file.name} пуст и не может быть обработан.`);
         }
         if (file.size > MAX_FILE_SIZE_BYTES) {
-            throw new Error(`Файл ${file.name} превышает допустимый размер 15 МБ.`);
+            throw new Error(`Файл ${file.name} превышает допустимый размер 1 ГБ.`);
         }
     });
 }
